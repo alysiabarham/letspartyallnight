@@ -20,6 +20,7 @@ export type ServerToClientEvents = {
     judgeName: Room["judgeName"];
     category: Room["category"];
   }) => void;
+  playerList: (data: { players: string[] }) => void;
   newEntry: (payload: { entry: string }) => void;
   sendAllEntries: (payload: { entries: string[] }) => void;
   gameStarted: (payload: { category: string; round: number }) => void;

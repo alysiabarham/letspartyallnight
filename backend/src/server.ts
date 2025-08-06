@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Room, PlayerResult, SubmitGuessPayload, RankingPayload } from "./types";
 import { Server } from "socket.io";
+import type { SocketServerEvents } from "./types.ts";
 import { ServerToClientEvents, ClientToServerEvents } from "./socketTypes";
 
 const app: Application = express();
@@ -24,7 +25,7 @@ app.use(
   }),
 );
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+const io = new Server<ClientToServerEvents, ServerToClientEvents, SocketServerEvents>(httpServer, {
   cors: {
     origin: allowedOrigins,
     methods: ["GET", "POST"],
@@ -259,12 +260,17 @@ app.post("/join-room", apiLimiter, (req, res) => {
     return res.status(403).json({ error: "Room is full." });
   }
 
-  if (room.players.some((p) => p.name === playerId)) {
-    return res.status(200).json({ message: "Player already in room.", room });
+  if (room.players.find((p) => p.name === playerId)) {
+    return res.status(409).json({ error: "Name already taken in this room." });
   }
 
   room.players.push({ id: playerId, name: playerId });
   console.log(`Player ${playerId} joined room ${upperCode}`);
+
+  io.to(upperCode).emit("playerList", {
+    players: room.players.map((p) => p.name),
+  });
+
   return res.status(200).json({ message: "Successfully joined room!", room });
 });
 

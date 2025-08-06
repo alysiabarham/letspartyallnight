@@ -52,6 +52,12 @@ export type Room = {
   gameData: Record<string, unknown>;
 };
 
+export type SocketServerEvents = {
+  joinError: (error: string) => void;
+  gameStarted: () => void;
+  startRankingPhase: () => void;
+};
+
 export type PlayerResult = {
   guess: string[];
   score: number;
