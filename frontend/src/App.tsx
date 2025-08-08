@@ -1,46 +1,47 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Routes,
   Route,
-  useNavigate,
   Navigate,
+  BrowserRouter as Router,
+  useNavigate,
 } from "react-router-dom";
 import {
-  Button,
-  Input,
+  ChakraProvider,
+  Box,
   VStack,
   Heading,
   Text,
+  Input,
+  Button,
   useToast,
-  ChakraProvider,
-  Box,
 } from "@chakra-ui/react";
 import axios from "axios";
 import "./App.css";
+import { socket } from "./socket";
 
+// Pages
+import Home from "./pages/Home";
 import RoomPage from "./RoomPage";
 import JudgeRankingPage from "./JudgeRankingPage";
 import GuesserRankingPage from "./GuesserRankingPage";
 import ResultsPage from "./ResultsPage";
-import { socket } from "./socket";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 function LandingPageContent() {
-  const [roomCodeInput, setRoomCodeInput] = useState("");
-  const [playerNameInput, setPlayerNameInput] = useState("");
+  const [roomCodeInput, setRoomCodeInput] = React.useState("");
+  const [playerNameInput, setPlayerNameInput] = React.useState("");
   const toast = useToast();
   const navigate = useNavigate();
 
   const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const filteredValue = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-    setPlayerNameInput(filteredValue);
+    setPlayerNameInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
   };
 
   const handleRoomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const filteredValue = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-    setRoomCodeInput(filteredValue);
+    setRoomCodeInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
   };
 
   const handleCreateRoom = async () => {
@@ -68,6 +69,7 @@ function LandingPageContent() {
         duration: 5000,
         isClosable: true,
       });
+
       socket.emit("joinGameRoom", { roomCode, playerName: hostId });
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
@@ -101,6 +103,7 @@ function LandingPageContent() {
       });
 
       const { room } = response.data;
+
       toast({
         title: "Room joined!",
         description: `Joined: ${room.code}`,
@@ -108,17 +111,18 @@ function LandingPageContent() {
         duration: 5000,
         isClosable: true,
       });
+
       socket.emit("joinGameRoom", {
         roomCode: room.code,
         playerName: playerId,
       });
+
       navigate(`/room/${room.code}`, { state: { playerName: playerId } });
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({
         title: "Join failed.",
-        description:
-          error.response?.data?.error || "Room not found or full.",
+        description: error.response?.data?.error || "Room not found or full.",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -131,8 +135,7 @@ function LandingPageContent() {
       <Heading
         as="h1"
         size="2xl"
-        color="#FF00FF"
-        textShadow="0 0 5px #FF00FF, 0 0 15px #FF00FF"
+        className="neon-text"
       >
         Let's Party All Night!
       </Heading>
@@ -186,6 +189,7 @@ function LandingPageContent() {
         pattern="^[a-zA-Z0-9]*$"
         title="Alphanumeric only"
       />
+
       <Button
         bg="transparent"
         color="#00FF00"
@@ -208,33 +212,31 @@ function App() {
       console.log(`📡 [Global] Received event: ${event}`, payload);
     });
 
-    return () => {
-      socket.offAny();
-    };
-  }, []);
-
-  useEffect(() => {
     socket.on("sendAllEntries", ({ entries }) => {
       console.log("📦 [Global] Received sendAllEntries:", entries);
     });
 
     return () => {
+      socket.offAny();
       socket.off("sendAllEntries");
     };
   }, []);
 
   return (
     <ChakraProvider>
-      <Box minH="100vh">
-        <Routes>
-          <Route path="/" element={<LandingPageContent />} />
-          <Route path="/room/:roomCode" element={<RoomPage />} />
-          <Route path="/judge/:roomCode" element={<JudgeRankingPage />} />
-          <Route path="/guess/:roomCode" element={<GuesserRankingPage />} />
-          <Route path="/results/:roomCode" element={<ResultsPage />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Box>
+      <Router>
+        <Box minH="100vh">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/join" element={<LandingPageContent />} />
+            <Route path="/room/:roomCode" element={<RoomPage />} />
+            <Route path="/judge/:roomCode" element={<JudgeRankingPage />} />
+            <Route path="/guess/:roomCode" element={<GuesserRankingPage />} />
+            <Route path="/results/:roomCode" element={<ResultsPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Box>
+      </Router>
     </ChakraProvider>
   );
 }

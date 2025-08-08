@@ -1,19 +1,30 @@
 {
-  "name": "server",
+  "name": "frontend",
   "version": "1.0.0",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx}": "eslint --fix"
+  },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^17.0.1",
-    "express": "^5.1.0",
-    "mongoose": "^8.16.1",
-    "socket.io": "^4.8.1"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3",
+    "@chakra-ui/react": "^2.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.x",
+    "vite": "^4.x",
+    "@vitejs/plugin-react": "^4.x",
+    "eslint": "^8.x",
+    "eslint-config-prettier": "^8.x",
+    "husky": "^9.1.7",
+    "lint-staged": "^13.3.0",
+    "prettier": "^3.x"
   }
 }

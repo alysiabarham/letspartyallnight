@@ -8,6 +8,8 @@ import { Room, PlayerResult, SubmitGuessPayload, RankingPayload } from "./types"
 import { Server } from "socket.io";
 import type { SocketServerEvents } from "./types.ts";
 import { ServerToClientEvents, ClientToServerEvents } from "./socketTypes";
+import type { ListenPayloads as _ListenPayloads } from "./types";
+import type { EmitPayloads } from "./types";
 
 const app: Application = express();
 const httpServer = createServer(app);
@@ -32,6 +34,14 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, SocketServerEv
     credentials: true,
   },
   transports: ["websocket"],
+});
+
+io.on("connection", (socket) => {
+  socket.on("player:join", (_payload: EmitPayloads["player:join"]) => {
+    // handle join
+  });
+
+  socket.emit("playerList", { players: ["Alysia"] });
 });
 
 function createRoom(code: string, hostId: string): Room {

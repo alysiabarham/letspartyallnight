@@ -1,3 +1,31 @@
+@font-face {
+  font-family: "AirstreamNF";
+  src: url("/fonts/Airstream-NF.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Picadilly';
+  src: url('/fonts/Picadilly.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BeautySchoolDropout';
+  src: url('/fonts/Beauty-school-dropout.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Vivaldi';
+  src: url('/fonts/Vivaldi.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 .App {
   text-align: center;
 }
@@ -24,6 +52,14 @@
   color: white;
 }
 
+.neon-text {
+  font-family: 'Picadilly', sans-serif;
+  font-size: calc(10px + 2vmin);
+  color: #ff00ff;
+  text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+  animation: flickerTitle 2s infinite;
+}
+
 .App-link {
   color: #61dafb;
 }
@@ -35,4 +71,56 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff;
+  }
+  to {
+    text-shadow: 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+  }
+}
+
+@keyframes glowTitle {
+  0% {
+    text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+  }
+  100% {
+    text-shadow: 0 0 40px #ff00ff, 0 0 80px #ff00ff, 0 0 120px #ff00ff;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes flicker {
+  0%   { opacity: 1; text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+  5%   { opacity: 0.4; text-shadow: none; }
+  10%  { opacity: 1; text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+  15%  { opacity: 0.8; text-shadow: 0 0 5px #00ff00; }
+  20%  { opacity: 1; text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+  25%  { opacity: 0.5; text-shadow: none; }
+  30%  { opacity: 1; text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+  100% { opacity: 1; text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+}
+
+@keyframes flickerTitle {
+  0%, 100% { opacity: 1; text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff; }
+  5% { opacity: 0.3; text-shadow: none; }
+  10% { opacity: 1; text-shadow: 0 0 15px #ff00ff, 0 0 30px #ff00ff; }
+  15% { opacity: 0.6; text-shadow: 0 0 5px #ff00ff; }
+  20% { opacity: 1; text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff; }
+}
+
+@keyframes fadeInForm {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }

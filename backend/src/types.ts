@@ -1,3 +1,17 @@
+// src/types/socket.ts
+
+export type EmitPayloads = {
+  "player:join": { name: string; roomId: string };
+  "player:leave": { playerId: string };
+  "game:start": { roomId: string };
+};
+
+export type ListenPayloads = {
+  "player:list": { players: string[] };
+  "game:state": { started: boolean };
+  error: { message: string };
+};
+
 export type SubmitGuessPayload = {
   roomCode: string;
   playerName: string;
