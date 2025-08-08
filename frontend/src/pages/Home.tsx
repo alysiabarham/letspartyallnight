@@ -54,6 +54,11 @@ const Home: React.FC = () => {
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+
+    window.addEventListener("load", () => {
+      document.body.classList.add("loaded");
+    });
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -203,76 +208,69 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "2px solid #00ff00",
     borderRadius: "6px",
     boxShadow: "0 0 10px #00ff00",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
+    transition: "transform 0.3s ease",
   },
-
-    formContainer: {
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        backgroundColor: "#111",
-        padding: "2rem",
-        borderRadius: "1rem",
-        boxShadow: "0 0 50px #00ff00",
-        zIndex: 1000,
-        width: "400px",
-        color: "#fff",
-        fontFamily: "Picadilly, sans-serif",
-        animation: "fadeInForm 0.3s ease-out",
-    },
-
-    input: {
-        display: "block",
-        width: "100%",
-        marginBottom: "1rem",
-        padding: "0.75rem",
-        fontSize: "1rem",
-        backgroundColor: "#222",
-        color: "#00ff00",
-        border: "2px solid #00ff00",
-        borderRadius: "6px",
-        boxShadow: "0 0 10px #00ff00",
-    },
-
-    textarea: {
-        display: "block",
-        width: "100%",
-        height: "100px",
-        marginBottom: "1rem",
-        padding: "0.75rem",
-        fontSize: "1rem",
-        backgroundColor: "#222",
-        color: "#00ff00",
-        border: "2px solid #00ff00",
-        borderRadius: "6px",
-        boxShadow: "0 0 10px #00ff00",
-    },
-
-    submitButton: {
-        padding: "0.75rem 1.5rem",
-        fontSize: "1rem",
-        cursor: "pointer",
-        backgroundColor: "#00ff00",
-        color: "#000",
-        border: "none",
-        borderRadius: "6px",
-        boxShadow: "0 0 15px #00ff00",
-        transition: "transform 0.3s ease, box-shadow 0.3s ease",
-    },
-
-    closeButton: {
-        position: "absolute",
-        top: "1rem",
-        right: "1rem",
-        fontSize: "2rem",
-        color: "#00ff00",
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-        zIndex: 1001,
-
-   }
-}
+  modal: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  formContainer: {
+    backgroundColor: "#1a1a2e",
+    padding: "2rem",
+    borderRadius: "8px",
+    position: "absolute",
+    boxShadow: "0 0 20px #00ff00",
+    width: "300px",
+    color: "#fff",
+    cursor: "move",
+  },
+  closeButton: {
+    position: "absolute",
+    top: "10px",
+    right: "10px",
+    background: "none",
+    border: "none",
+    color: "#ff0000",
+    fontSize: "1.5rem",
+    cursor: "pointer",
+  },
+  input: {
+    width: "100%",
+    padding: "0.5rem",
+    margin: "0.5rem 0",
+    backgroundColor: "#2a2a3e",
+    border: "1px solid #00ff00",
+    color: "#fff",
+    borderRadius: "4px",
+  },
+  textarea: {
+    width: "100%",
+    padding: "0.5rem",
+    margin: "0.5rem 0",
+    backgroundColor: "#2a2a3e",
+    border: "1px solid #00ff00",
+    color: "#fff",
+    borderRadius: "4px",
+    height: "100px",
+  },
+  submitButton: {
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    cursor: "pointer",
+    backgroundColor: "#00ff00",
+    color: "#000",
+    border: "none",
+    borderRadius: "6px",
+    marginTop: "1rem",
+  },
+};
 
 export default Home;

@@ -7,7 +7,7 @@
 
 @font-face {
   font-family: 'Picadilly';
-  src: url('/fonts/Picadilly.ttf') format('truetype');
+  src: url("/fonts/Picadilly.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
@@ -24,6 +24,15 @@
   src: url('/fonts/Vivaldi.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+}
+
+body {
+  font-family: "Picadilly", sans-serif;
+  visibility: hidden;
+}
+
+body.loaded {
+  visibility: visible;
 }
 
 .App {
