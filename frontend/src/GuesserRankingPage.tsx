@@ -24,9 +24,8 @@ import {
   Spinner
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { socket } from "./socket";
-import { useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { socket } from './socket';
 
 const SortableItem = ({ id, index }: { id: string; index: number }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -52,7 +51,14 @@ function GuesserRankingPage() {
   const { roomCode } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-const [playerName] = useState(location.state?.playerName || localStorage.getItem('playerName') || 'Guest');
+  const toast = useToast();
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const [playerName] = useState(
+    location.state?.playerName ||
+    localStorage.getItem('playerName') ||
+    'Guest'
+  );
 
   const [entries, setEntries] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -60,52 +66,31 @@ const [playerName] = useState(location.state?.playerName || localStorage.getItem
   const [category, setCategory] = useState('');
   const [finalRanking, setFinalRanking] = useState<string[]>([]);
   const [score, setScore] = useState(0);
-
-  const toast = useToast();
-  const sensors = useSensors(useSensor(PointerSensor));
-  
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [currentRound, setCurrentRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(5);
 
   useEffect(() => {
-    socket.emit('joinGameRoom', {
-        roomCode,
-        playerName
+    socket.emit('joinGameRoom', { roomCode, playerName });
+
+    socket.on('roomState', ({ phase, category, currentRound, totalRounds, scores }) => {
+      if (category) setCategory(category);
+      if (currentRound) setCurrentRound(currentRound);
+      if (totalRounds) setTotalRounds(totalRounds);
+      if (scores) setScores(scores);
+      if (phase === 'ranking') socket.emit('requestEntries', { roomCode });
     });
-    socket.on('roomState', ({ phase, judgeName, category }) => {
-        console.log("🧠 Received roomState:", { phase, judgeName });
-        console.log(`🩺 Phase check inside GuesserRankingPage: ${phase}`);
-        if (category) {
-            setCategory(category);
-        }
-        if (phase === 'ranking') {
-            socket.emit('requestEntries', { roomCode });
-        }
-        });
-
-    socket.on('gameStarted', (payload: { category: string }) => {
-        setCategory(payload.category);
-        });
-
-    socket.emit('requestEntries', { roomCode });
 
     socket.on('sendAllEntries', ({ entries }: { entries: string[] }) => {
-      console.log('✅ Received selected entries for guessing:', entries);
-
-      if (!entries || entries.length < 1) {
-        console.log("❌ No entries received from backend. Waiting...");
-        return;
-      }
-
-      setEntries(entries);
+      if (!entries || entries.length < 1) return;
+      const unique = Array.from(new Set(entries));
+      setEntries(unique);
     });
 
-    socket.on('gameStarted', ({ category }) => {
-        setCategory(category);
-     });
-
-    socket.on('revealResults', ({ judgeRanking, results }) => {
-      console.log('📊 Scoring results received:', results);
+    socket.on('revealResults', ({ judgeRanking, results, scores }) => {
       setFinalRanking(judgeRanking);
       setScore(results[playerName]?.score || 0);
+      setScores(scores || {});
       setResultsVisible(true);
       toast({
         title: `Results revealed! You scored ${results[playerName]?.score || 0} points!`,
@@ -116,41 +101,17 @@ const [playerName] = useState(location.state?.playerName || localStorage.getItem
       });
     });
 
-    if (entries.length === 0) {
-        socket.emit('requestEntries', { roomCode });
-    }
+    socket.on('gameOver', ({ scores }) => {
+      navigate(`/final/${roomCode}`, { state: { scores } });
+    });
 
     return () => {
+      socket.off('roomState');
       socket.off('sendAllEntries');
       socket.off('revealResults');
+      socket.off('gameOver');
     };
-}, [entries, playerName, roomCode, toast]);
-
-useEffect(() => {
-  socket.on('playerJoined', ({ players }) => {
-    const current = players.find((p: { name: string; hasGuessed?: boolean }) => p.name === playerName);
-    if (current?.hasGuessed) {
-      console.log("🛑 Already guessed—redirecting to results.");
-      navigate(`/results/${roomCode}`);
-    }
-  });
-}, [playerName, navigate, roomCode]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (entries.length === 0) {
-        toast({
-          title: "Still waiting on Judge...",
-          description: "The Judge may not have submitted yet.",
-          status: "warning",
-          duration: 6000,
-          isClosable: true
-        });
-      }
-    }, 5000);
-
-    return () => clearTimeout(timeout);
-}, [entries, toast]);
+  }, [roomCode, playerName, toast, navigate]);
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
@@ -162,35 +123,28 @@ useEffect(() => {
   };
 
   const handleSubmit = () => {
-  console.log('📤 Emitting submitGuess:', {
-    roomCode,
-    playerName,
-    guess: entries
-  });
-
-  socket.emit('submitGuess', {
-    roomCode,
-    playerName,
-    guess: entries
-  });
-
-  setSubmitted(true);
-  toast({
-    title: 'Guess submitted!',
-    description: 'Waiting for results...',
-    status: 'success',
-    duration: 4000,
-    isClosable: true
-  });
-};
+    socket.emit('submitGuess', { roomCode, playerName, guess: entries });
+    setSubmitted(true);
+    toast({
+      title: 'Guess submitted!',
+      description: 'Waiting for results...',
+      status: 'success',
+      duration: 4000,
+      isClosable: true
+    });
+  };
 
   return (
     <VStack spacing={6} p={8} bg="#0c0655ff" minH="100vh" color="white">
-        {category && (
-            <Heading size="md" color="yellow.200">
-                Round Topic: {category}
-            </Heading>
-        )}
+      <Heading size="md" color="yellow.200">
+        Round {currentRound} of {totalRounds}
+      </Heading>
+
+      {category && (
+        <Heading size="md" color="cyan.300">
+          Topic: {category}
+        </Heading>
+      )}
 
       {!resultsVisible ? (
         <>
@@ -236,20 +190,17 @@ useEffect(() => {
           <Box w="100%" maxW="400px">
             <VStack spacing={3}>
               {finalRanking.map((item, idx) => (
-                <Box
-                  key={item}
-                  p={3}
-                  bg="#1A1A2E"
-                  borderRadius="md"
-                  w="100%"
-                >
+                <Box key={item} p={3} bg="#1A1A2E" borderRadius="md" w="100%">
                   #{idx + 1}: {item}
                 </Box>
               ))}
             </VStack>
           </Box>
           <Text pt={4} fontSize="lg" fontWeight="bold" color="yellow.400">
-            Your Score: {score} / {finalRanking.length}
+            Your Score This Round: {score}
+          </Text>
+          <Text fontSize="md" color="whiteAlpha.800">
+            Total Score: {scores[playerName] || 0}
           </Text>
         </>
       )}

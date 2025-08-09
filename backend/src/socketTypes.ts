@@ -9,6 +9,7 @@ export type ClientToServerEvents = {
   submitRanking: (payload: RankingPayload) => void;
   requestEntries: (payload: { roomCode: string }) => void;
   submitGuess: (payload: SubmitGuessPayload) => void;
+  restartGame: (payload: { roomCode: string }) => void; // ✅ Add this
 };
 
 export type ServerToClientEvents = {

@@ -24,9 +24,11 @@ import { socket } from "./socket";
 // Pages
 import Home from "./pages/Home";
 import RoomPage from "./RoomPage";
+import EnterRoom from "./pages/EnterRoom"; // ✅ Added
 import JudgeRankingPage from "./JudgeRankingPage";
 import GuesserRankingPage from "./GuesserRankingPage";
 import ResultsPage from "./ResultsPage";
+import FinalResultsPage from "./FinalResultsPage"; // ✅ New
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -132,11 +134,7 @@ function LandingPageContent() {
 
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#1A1A2E">
-      <Heading
-        as="h1"
-        size="2xl"
-        className="neon-text"
-      >
+      <Heading as="h1" size="2xl" className="neon-text">
         Let's Party All Night!
       </Heading>
       <Text fontSize="lg" color="white">
@@ -228,11 +226,13 @@ function App() {
         <Box minH="100vh">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/enter-room" element={<EnterRoom />} /> {/* ✅ Added */}
             <Route path="/join" element={<LandingPageContent />} />
             <Route path="/room/:roomCode" element={<RoomPage />} />
             <Route path="/judge/:roomCode" element={<JudgeRankingPage />} />
             <Route path="/guess/:roomCode" element={<GuesserRankingPage />} />
             <Route path="/results/:roomCode" element={<ResultsPage />} />
+            <Route path="/final/:roomCode" element={<FinalResultsPage />} /> {/* ✅ New */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Box>

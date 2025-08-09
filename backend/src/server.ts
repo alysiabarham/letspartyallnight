@@ -597,6 +597,35 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("restartGame", ({ roomCode }: { roomCode: string }) => {
+    const upperCode = roomCode.toUpperCase();
+    const room = rooms[upperCode];
+    if (!room) return;
+
+    room.round = 1;
+    room.entries = [];
+    room.guesses = {};
+    room.judgeRanking = [];
+    room.selectedEntries = [];
+    room.totalScores = {};
+    room.phase = "entry";
+
+    const category: string =
+      categories.length > 0
+        ? (categories[Math.floor(Math.random() * categories.length)] ?? "Misc")
+        : "Misc";
+
+    const judgeIndex = (room.round - 1) % room.players.length;
+    const judgeName = room.players[judgeIndex]?.name ?? "Unknown";
+    room.judgeName = judgeName;
+
+    console.log(`🔄 Game restarted in ${upperCode} | Judge: ${judgeName}`);
+    io.to(upperCode).emit("gameStarted", {
+      category,
+      round: room.round,
+    });
+  });
+
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
   });

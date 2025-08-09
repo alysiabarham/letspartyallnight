@@ -4,13 +4,13 @@ import { useNavigate } from "react-router-dom";
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const [showContactForm, setShowContactForm] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", message: "", honeypot: "" });
   const [formError, setFormError] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
   const offset = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
 
-  const handlePlayClick = () => navigate("/game");
+  const handlePlayClick = () => navigate("/enter-room");
   const handleAccountClick = () => navigate("/account");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -19,7 +19,13 @@ const Home: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, email, message } = formData;
+    const { name, email, message, honeypot } = formData;
+
+    // Honeypot check
+    if (honeypot) {
+      console.warn("Bot detected — submission ignored.");
+      return;
+    }
 
     if (!name || !email || !message) {
       setFormError("Please fill out all fields.");
@@ -35,7 +41,7 @@ const Home: React.FC = () => {
       });
       alert("Message sent! We'll get back to you soon.");
       setShowContactForm(false);
-      setFormData({ name: "", email: "", message: "" });
+      setFormData({ name: "", email: "", message: "", honeypot: "" });
     } catch (err) {
       alert("Failed to send message. Try again later.");
     }
@@ -79,7 +85,13 @@ const Home: React.FC = () => {
       </h1>
 
       <div style={styles.imageRow}>
-        <div style={styles.imageButton} onClick={handlePlayClick}>
+        <div
+          style={styles.imageButton}
+          onClick={(e) => {
+            e.preventDefault();
+            handlePlayClick();
+          }}
+        >
           <img src="/images/rank-the-topic.jpg" alt="Rank the Topic" style={styles.image} />
           <p style={styles.imageLabel}>Play Now</p>
         </div>
@@ -109,6 +121,13 @@ const Home: React.FC = () => {
               <input name="name" placeholder="Your name" value={formData.name} onChange={handleInputChange} style={styles.input} />
               <input name="email" placeholder="Your email" value={formData.email} onChange={handleInputChange} style={styles.input} />
               <textarea name="message" placeholder="Your message" value={formData.message} onChange={handleInputChange} style={styles.textarea} />
+              <input
+                name="honeypot"
+                value={formData.honeypot}
+                onChange={handleInputChange}
+                style={{ display: "none" }}
+                autoComplete="off"
+              />
               {formError && <p style={{ color: "red" }}>{formError}</p>}
               <button type="submit" style={styles.submitButton}>Send</button>
             </form>
@@ -185,7 +204,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: "bold",
     fontSize: "3rem",
     textShadow: "0 0 10px #00ff00, 0 0 25px #00ff00, 0 0 50px #00ff00",
-    fontFamily: "AirstreamNF, sans-serif",
+    fontFamily: "Beauty School Dropout, sans-serif",
     zIndex: 2,
     pointerEvents: "none",
     backgroundColor: "transparent",
@@ -208,68 +227,70 @@ const styles: { [key: string]: React.CSSProperties } = {
     border: "2px solid #00ff00",
     borderRadius: "6px",
     boxShadow: "0 0 10px #00ff00",
-    transition: "transform 0.3s ease",
+    transition: "transform 0.3s ease, box-shadow 0.3s ease",
   },
   modal: {
     position: "fixed",
     top: 0,
     left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 999,
   },
   formContainer: {
-    backgroundColor: "#1a1a2e",
+    backgroundColor: "#1a1a1a",
     padding: "2rem",
     borderRadius: "8px",
+    boxShadow: neonPulse,
     position: "absolute",
-    boxShadow: "0 0 20px #00ff00",
-    width: "300px",
-    color: "#fff",
     cursor: "move",
+    width: "90%",
+    maxWidth: "500px",
+    color: "#fff",
+    fontFamily: "sans-serif",
   },
   closeButton: {
     position: "absolute",
-    top: "10px",
-    right: "10px",
-    background: "none",
+    top: "0.5rem",
+    right: "0.5rem",
+    background: "transparent",
     border: "none",
-    color: "#ff0000",
+    color: "#fff",
     fontSize: "1.5rem",
     cursor: "pointer",
   },
   input: {
     width: "100%",
     padding: "0.5rem",
-    margin: "0.5rem 0",
-    backgroundColor: "#2a2a3e",
-    border: "1px solid #00ff00",
-    color: "#fff",
+    marginBottom: "1rem",
     borderRadius: "4px",
+    border: "1px solid #ccc",
+    fontFamily: "sans-serif",
   },
   textarea: {
     width: "100%",
     padding: "0.5rem",
-    margin: "0.5rem 0",
-    backgroundColor: "#2a2a3e",
-    border: "1px solid #00ff00",
-    color: "#fff",
-    borderRadius: "4px",
     height: "100px",
+    marginBottom: "1rem",
+    borderRadius: "4px",
+    border: "1px solid #ccc",
+    fontFamily: "sans-serif",
   },
   submitButton: {
     padding: "0.75rem 1.5rem",
     fontSize: "1rem",
-    cursor: "pointer",
-    backgroundColor: "#00ff00",
-    color: "#000",
+    backgroundColor: "#ff00ff",
+    color: "#fff",
     border: "none",
-    borderRadius: "6px",
-    marginTop: "1rem",
+    borderRadius: "4px",
+    cursor: "pointer",
+    boxShadow: neonPulse,
+    fontFamily: "Picadilly, sans-serif",
+    transition: "transform 0.3s ease, box-shadow 0.3s ease",
   },
 };
 
