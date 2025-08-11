@@ -29,6 +29,7 @@ export default function EnterRoom() {
   };
 
   const handleCreateRoom = async () => {
+    console.log("Creating room with name:", playerName);
     if (!playerName.trim()) {
       toast({
         title: "Enter your name.",
@@ -38,7 +39,10 @@ export default function EnterRoom() {
       });
       return;
     }
-
+if (!socket.connected) {
+  toast({ title: "Socket not connected", status: "error" });
+  return;
+}
     try {
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId: playerName.trim(),
