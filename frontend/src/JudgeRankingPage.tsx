@@ -31,21 +31,27 @@ import { socket } from './socket';
 
 const SortableItem = ({ id, index }: { id: string; index: number }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const style = {
+  transform: CSS.Transform.toString(transform),
+  transition,
+  boxShadow: '0 0 10px #FF00FF',
+  color: '#FF00FF',
+};
 
   return (
     <Box
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={style}
-      p={3}
-      bg="#16213E"
-      borderRadius="md"
-      w="100%"
-    >
-      #{index + 1}: {id}
-    </Box>
+  ref={setNodeRef}
+  {...attributes}
+  {...listeners}
+  style={style}
+  p={3}
+  bg="#16213E"
+  borderRadius="md"
+  w="100%"
+  _hover={{ boxShadow: '0 0 15px #FF00FF', transform: 'scale(1.02)' }}
+>
+  #{index + 1}: {id}
+</Box>
   );
 };
 
@@ -86,7 +92,11 @@ function JudgeRankingPage() {
     setSelectedEntries(autoPick);
   };
 
-  socket.on('sendAllEntries', handleSendAllEntries);
+  if (socket.connected) {
+    socket.on('sendAllEntries', handleSendAllEntries);
+  } else {
+    toast({ title: 'Socket not connected.', status: 'error' });
+  }
 
   return () => {
     socket.off('sendAllEntries', handleSendAllEntries);
@@ -111,12 +121,14 @@ function JudgeRankingPage() {
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
-    if (active.id !== over?.id) {
-      const oldIndex = selectedEntries.indexOf(active.id);
-      const newIndex = selectedEntries.indexOf(over.id);
-      setSelectedEntries((items) => arrayMove(items, oldIndex, newIndex));
-    }
-  };
+if (!over) return;
+
+const oldIndex = selectedEntries.indexOf(active.id);
+const newIndex = selectedEntries.indexOf(over.id);
+if (oldIndex !== -1 && newIndex !== -1) {
+  setSelectedEntries((items) => arrayMove(items, oldIndex, newIndex));
+}
+};
 
   const handleSubmit = () => {
     if (hasDuplicates) {
@@ -223,34 +235,43 @@ function JudgeRankingPage() {
           )}
 
           {judgePhase === 'rank' && (
-            <>
-              <Heading size="md" color="yellow.300" pt={6}>
-                Drag to Set Final Order
-              </Heading>
+  <>
+    <Heading size="md" color="yellow.300" pt={6}>
+      Drag to Set Final Order
+    </Heading>
 
-              <Box w="100%" maxW="400px">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={selectedEntries} strategy={verticalListSortingStrategy}>
-                    <VStack spacing={3}>
-                      {selectedEntries.map((item, index) => (
-                        <SortableItem key={item} id={item} index={index} />
-                      ))}
-                    </VStack>
-                  </SortableContext>
-                </DndContext>
+    {selectedEntries.length === 0 ? (
+      <Text color="gray.400">No entries selected yet.</Text>
+    ) : (
+      <Box w="100%" maxW="400px">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={selectedEntries} strategy={verticalListSortingStrategy}>
+            <VStack spacing={3}>
+              {selectedEntries.map((item, index) => (
+                <SortableItem key={item} id={item} index={index} />
+              ))}
+            </VStack>
+          </SortableContext>
+        </DndContext>
 
-                {!submitted ? (
-                  <Button colorScheme="green" onClick={handleSubmit}>
-                    Submit Final Ranking
-                  </Button>
-                ) : (
-                  <Text fontSize="md" color="green.300">
-                    Ranking submitted. Waiting for guesses...
-                  </Text>
-                )}
-              </Box>
-            </>
-          )}
+        {!submitted ? (
+          <Button colorScheme="green" onClick={handleSubmit}>
+            Submit Final Ranking
+          </Button>
+        ) : (
+          <>
+            <Text fontSize="md" color="green.300">
+              Ranking submitted. Waiting for guesses...
+            </Text>
+            <Button mt={4} colorScheme="blue" onClick={() => window.location.href = '/'}>
+              Back to Lobby
+            </Button>
+          </>
+        )}
+      </Box>
+    )}
+  </>
+)}
         </>
       )}
     </VStack>

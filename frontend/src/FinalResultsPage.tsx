@@ -12,13 +12,19 @@ export default function FinalResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { roomCode } = useParams();
-  const scores: Record<string, number> = location.state?.scores || {};
+  const scores: Record<string, number> | null = location.state?.scores || null;
 
-  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const topScore = sorted[0]?.[1] || 0;
-  const winners = sorted
+let sorted: [string, number][] = [];
+let topScore = 0;
+let winners: string[] = [];
+
+if (scores) {
+  sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  topScore = sorted[0]?.[1] || 0;
+  winners = sorted
     .filter(([_, score]) => score === topScore)
     .map(([name]) => name);
+}
 
   const handlePlayAgain = () => {
     socket.emit("restartGame", { roomCode });
@@ -39,25 +45,33 @@ export default function FinalResultsPage() {
         Room Code: {roomCode}
       </Text>
 
-      <Box w="100%" maxW="400px">
-        {sorted.map(([name, score], idx) => (
-          <Box
-            key={name}
-            p={3}
-            bg={score === topScore ? "#FFD700" : "#2C2C3E"}
-            borderRadius="md"
-            w="100%"
-          >
-            #{idx + 1}: {name} — {score} pts
-          </Box>
-        ))}
-      </Box>
+      {scores ? (
+  <>
+    <Box w="100%" maxW="400px">
+      {sorted.map(([name, score], idx) => (
+        <Box
+          key={name}
+          p={3}
+          bg={score === topScore ? "#FFD700" : "#2C2C3E"}
+          borderRadius="md"
+          w="100%"
+        >
+          #{idx + 1}: {name} — {score} pts
+        </Box>
+      ))}
+    </Box>
 
-      <Text fontSize="lg" color="cyan.300">
-        {winners.length === 1
-          ? `🎉 Winner: ${winners[0]}`
-          : `🎉 Tie! Winners: ${winners.join(", ")}`}
-      </Text>
+    <Text fontSize="lg" color="cyan.300">
+      {winners.length === 1
+        ? `🎉 Winner: ${winners[0]}`
+        : `🎉 Tie! Winners: ${winners.join(", ")}`}
+    </Text>
+  </>
+) : (
+  <Text fontSize="lg" color="red.300">
+    ❌ No score data found. Please return to the lobby and start a new game.
+  </Text>
+)}
 
       <VStack spacing={4} mt={8}>
         <Button

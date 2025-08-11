@@ -205,7 +205,7 @@ function RoomPage() {
       return;
     }
 
-    if (entries.includes(cleaned)) {
+    if (entries.map(e => e.toLowerCase()).includes(cleaned)) {
   toast({
     title: "Duplicate entry",
     description: "That response has already been submitted.",
@@ -269,19 +269,13 @@ function RoomPage() {
     socket.emit('startRankingPhase', { roomCode, judgeName: judge });
   };
   
-players.map((p, i) => (
-  <Text key={i} color={p === judge ? "#FF00FF" : "#FFFF00"}>
-    {p} {p === judge && "👑"}
-  </Text>
-))
-
   useEffect(() => {
     console.log(`🔁 Frontend advanced to round ${round}`);
   }, [round]);
 
   const isJudge = playerName === judge;
   const isHost = playerName === host;
-  const isSpectator = !players.includes(playerName);
+  const isSpectator = !players.map(p => p.toLowerCase()).includes(playerName.toLowerCase());
 
   return (
     <VStack spacing={6} p={6} minH="100vh" bg="#0F0F1E" color="white">
@@ -292,6 +286,7 @@ players.map((p, i) => (
       {host && <Text>Host: {host}</Text>}
       {judge && <Text>Judge this round: <strong>{judge}</strong></Text>}
       <Text>Phase: <strong>{phase}</strong></Text>
+      <Text>Round: <strong>{round}</strong> / {roundLimit}</Text>
       {category && <Text fontStyle="italic">Category: {category}</Text>}
 
       {!gameStarted && isHost && (
@@ -355,6 +350,17 @@ players.map((p, i) => (
         </>
       )}
 
+{gameStarted && !isJudge && !isSpectator && entries.length > 0 && (
+  <Box mt={4} border="1px solid #FFFF00" p={3} borderRadius="md" w="300px">
+    <Heading size="sm" mb={2} color="#FFFF00">Submitted Entries:</Heading>
+    <List spacing={1}>
+      {entries.map((entry, i) => (
+        <ListItem key={i} color="whiteAlpha.800">• {entry}</ListItem>
+      ))}
+    </List>
+  </Box>
+)}
+
       {gameStarted && isJudge && (
         <Button
           colorScheme="pink"
@@ -363,6 +369,12 @@ players.map((p, i) => (
           Advance to Ranking Phase
         </Button>
       )}
+
+{gameStarted && isSpectator && (
+  <Text mt={4} color="gray.300">
+    You're spectating this round. Sit back and enjoy the chaos!
+  </Text>
+)}
 
       <Box border="2px solid #00FFFF" p={4} borderRadius="md" w="300px" mt={6}>
         <Heading size="md" mb={2} color="#00FFFF">

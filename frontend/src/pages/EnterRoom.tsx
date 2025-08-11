@@ -43,6 +43,8 @@ export default function EnterRoom() {
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId: playerName.trim(),
       });
+
+      console.log("Create response:", response.data);
       const { roomCode } = response.data;
 
       toast({
@@ -122,9 +124,9 @@ export default function EnterRoom() {
 
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#0F0F1E">
-      <Heading as="h2" size="xl" className="neon-text">
-        Enter the Party Zone 🎉
-      </Heading>
+      <Heading size="2xl" className="rank-title">Rank the Topic</Heading>
+      <Text fontSize="xl" className="sub-heading">Enter the Party Zone 🎉</Text>
+      <Text className="sub-heading" color="white">Room: {roomCode}</Text>
 
       <Input
         placeholder="Your Name"
@@ -154,9 +156,7 @@ export default function EnterRoom() {
         CREATE ROOM
       </Button>
 
-      <Text fontSize="lg" color="white">
-        OR
-      </Text>
+      <Text fontSize="lg" color="white">OR</Text>
 
       <Input
         placeholder="Room Code"

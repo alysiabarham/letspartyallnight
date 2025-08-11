@@ -189,19 +189,6 @@ app.all("/socket.io/*", (_req, res) => {
 // --- Middleware ---
 app.use(helmet());
 app.use(express.json());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST"],
-    credentials: true,
-  }),
-);
 
 // --- Rate Limiting ---
 const apiLimiter = rateLimit({
@@ -221,6 +208,13 @@ const isAlphanumeric = (text: string): boolean => /^[a-zA-Z0-9]+$/.test(text);
 // --- Routes ---
 app.get("/", (_req, res) => {
   res.send("Hello from the Let's Party All Night backend!");
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    activeRooms: Object.keys(rooms).length,
+  });
 });
 
 app.post("/create-room", createRoomLimiter, (req, res) => {
@@ -627,7 +621,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
+    const room = Object.values(rooms).find((r) => r.players.some((p) => p.id === socket.id));
+    const player = room?.players.find((p) => p.id === socket.id);
+    console.log(`🔌 Disconnected: ${player?.name ?? socket.id}`);
   });
 });
 

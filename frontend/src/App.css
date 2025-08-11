@@ -20,10 +20,29 @@
 }
 
 @font-face {
+  font-family: 'ScreamingNeon';
+  src: url('/fonts/ScreamingNeon.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
   font-family: 'Vivaldi';
   src: url('/fonts/Vivaldi.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
+}
+
+.rank-title {
+  font-family: 'Vivaldi', cursive;
+  font-size: 3rem;
+  color: #FF00FF;
+}
+
+.sub-heading {
+  font-family: 'ScreamingNeon', sans-serif;
+  font-size: 1.5rem;
+  color: #FFFF00;
 }
 
 body {

@@ -29,7 +29,12 @@ import { socket } from './socket';
 
 const SortableItem = ({ id, index }: { id: string; index: number }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    boxShadow: '0 0 10px #00FFFF',
+    color: '#00FFFF',
+  };
 
   return (
     <Box
@@ -41,6 +46,7 @@ const SortableItem = ({ id, index }: { id: string; index: number }) => {
       bg="#16213E"
       borderRadius="md"
       w="100%"
+      _hover={{ boxShadow: '0 0 15px #00FFFF', transform: 'scale(1.02)' }}
     >
       #{index + 1}: {id}
     </Box>
@@ -71,7 +77,12 @@ function GuesserRankingPage() {
   const [totalRounds, setTotalRounds] = useState(5);
 
   useEffect(() => {
-    socket.emit('joinGameRoom', { roomCode, playerName });
+    if (!socket.connected) {
+  toast({ title: 'Socket not connected.', status: 'error' });
+} else {
+  socket.emit('joinGameRoom', { roomCode, playerName });
+}
+
 
     socket.on('roomState', ({ phase, category, currentRound, totalRounds, scores }) => {
       if (category) setCategory(category);
@@ -115,11 +126,13 @@ function GuesserRankingPage() {
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
-    if (active.id !== over?.id) {
-      const oldIndex = entries.indexOf(active.id);
-      const newIndex = entries.indexOf(over.id);
-      setEntries((items) => arrayMove(items, oldIndex, newIndex));
-    }
+if (!over) return;
+
+const oldIndex = entries.indexOf(active.id);
+const newIndex = entries.indexOf(over.id);
+if (oldIndex !== -1 && newIndex !== -1) {
+  setEntries((items) => arrayMove(items, oldIndex, newIndex));
+}
   };
 
   const handleSubmit = () => {
@@ -189,11 +202,15 @@ function GuesserRankingPage() {
           <Heading size="lg" color="#FF00FF">Judge’s Final Ranking</Heading>
           <Box w="100%" maxW="400px">
             <VStack spacing={3}>
-              {finalRanking.map((item, idx) => (
-                <Box key={item} p={3} bg="#1A1A2E" borderRadius="md" w="100%">
-                  #{idx + 1}: {item}
-                </Box>
-              ))}
+              {finalRanking.length === 0 ? (
+  <Text color="gray.400">Waiting for Judge’s ranking...</Text>
+) : (
+  finalRanking.map((item, idx) => (
+    <Box key={item} p={3} bg="#1A1A2E" borderRadius="md" w="100%">
+      #{idx + 1}: {item}
+    </Box>
+  ))
+)}
             </VStack>
           </Box>
           <Text pt={4} fontSize="lg" fontWeight="bold" color="yellow.400">
@@ -202,6 +219,9 @@ function GuesserRankingPage() {
           <Text fontSize="md" color="whiteAlpha.800">
             Total Score: {scores[playerName] || 0}
           </Text>
+          <Button mt={4} colorScheme="blue" onClick={() => navigate('/')}>
+  Back to Lobby
+</Button>
         </>
       )}
     </VStack>
