@@ -128,8 +128,12 @@ if (!socket.connected) {
 
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#0F0F1E">
-      <Heading size="2xl" className="rank-title">Rank the Topic</Heading>
-      <Text fontSize="xl" className="sub-heading">Enter the Party Zone 🎉</Text>
+      <Heading size="2xl" className="rank-title" style={{ fontFamily: 'Vivaldi' }}>
+  Rank the Topic
+</Heading>
+      <Text fontSize="2xl" className="sub-heading" style={{ fontFamily: 'ScreamingNeon' }}>
+  Enter the Party Zone 🎉
+</Text>
       <Text className="sub-heading" color="white">Room: {roomCode}</Text>
 
       <Input
