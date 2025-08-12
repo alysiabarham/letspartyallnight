@@ -71,9 +71,12 @@ function generateRoomCode(): string {
 
 app.set("trust proxy", 1);
 const port = process.env.PORT || 10000;
-httpServer.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
-});
+
+if (require.main === module) {
+  httpServer.listen(port, () => {
+    console.log(`✅ Backend server listening at http://localhost:${port}`);
+  });
+}
 const rooms: Record<string, Room> = {};
 const categories = [
   "Best Ice Cream Flavors",
