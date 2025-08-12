@@ -34,14 +34,14 @@
 }
 
 .rank-title {
-  font-family: 'Vivaldi', cursive;
+  font-family: 'Vivaldi', cursive, serif;
   font-size: 3rem;
   color: #FF00FF;
 }
 
 .sub-heading {
   font-family: 'ScreamingNeon', sans-serif;
-  font-size: 1.5rem;
+  font-size: 2rem;
   color: #FFFF00;
 }
 

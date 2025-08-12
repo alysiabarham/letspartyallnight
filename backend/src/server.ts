@@ -632,7 +632,3 @@ io.on("connection", (socket) => {
     console.log(`🔌 Disconnected: ${player?.name ?? socket.id}`);
   });
 });
-
-httpServer.listen(port, () => {
-  console.log(`Backend server listening at http://localhost:${port}`);
-});
