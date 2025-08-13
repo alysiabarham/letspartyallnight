@@ -39,6 +39,16 @@ function RoomPage() {
   const [roundLimit, setRoundLimit] = useState(5);
 
   useEffect(() => {
+  socket.on("playerList", ({ players }) => {
+    setPlayers(players); // or whatever your state setter is
+  });
+
+  return () => {
+    socket.off("playerList");
+  };
+}, []);
+
+  useEffect(() => {
     if (!roomCode) {
       toast({ title: 'Missing room code.', status: 'error' });
       navigate('/');
@@ -287,7 +297,11 @@ function RoomPage() {
       {judge && <Text>Judge this round: <strong>{judge}</strong></Text>}
       <Text>Phase: <strong>{phase}</strong></Text>
       <Text>Round: <strong>{round}</strong> / {roundLimit}</Text>
-      {category && <Text fontStyle="italic">Category: {category}</Text>}
+      {category && (
+  <Heading size="3xl" fontFamily="Vivaldi">
+    Rank the Topic: {category}
+  </Heading>
+)}
 
       {!gameStarted && isHost && (
         <>

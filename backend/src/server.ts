@@ -270,7 +270,8 @@ app.post("/join-room", apiLimiter, (req, res) => {
     return res.status(403).json({ error: "Room is full." });
   }
 
-  if (room.players.find((p) => p.name === playerId)) {
+  const existingPlayer = room.players.find((p) => p.name === playerId);
+  if (existingPlayer) {
     return res.status(409).json({ error: "Name already taken in this room." });
   }
 
