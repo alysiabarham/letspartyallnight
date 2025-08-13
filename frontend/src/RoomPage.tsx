@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import {
+  HStack,
   VStack,
   Heading,
   Text,
@@ -37,6 +38,7 @@ function RoomPage() {
   const [gameStarted, setGameStarted] = useState(false);
   const [phase, setPhase] = useState<'waiting' | 'entry' | 'ranking'>('waiting');
   const [roundLimit, setRoundLimit] = useState(5);
+  const [role, setRole] = useState("player");
 
   useEffect(() => {
   socket.on("playerList", ({ players }) => {
@@ -103,6 +105,12 @@ function RoomPage() {
     };
 
     handleJoinRoom();
+
+socket.emit("joinGameRoom", {
+  roomCode,
+  playerName: playerName.trim(),
+  role,
+});
 
     return () => {
       socket.off('playerJoined');
@@ -191,7 +199,8 @@ function RoomPage() {
     toast({ title: 'Game started!', status: 'success', duration: 3000, isClosable: true });
   };
 
-  const handleEntrySubmit = () => {
+  const handleEntrySubmit = (text: string) => {
+  // use the text argument instead of state
     const trimmed = entryText.trim();
     const cleaned = trimmed.toLowerCase();
     const isAlphanumeric = /^[a-zA-Z0-9 ]+$/.test(cleaned);
@@ -288,25 +297,50 @@ function RoomPage() {
   const isSpectator = !players.map(p => p.toLowerCase()).includes(playerName.toLowerCase());
 
   return (
-    <VStack spacing={6} p={6} minH="100vh" bg="#0F0F1E" color="white">
+    <VStack spacing={6} p={6} minH="100vh" bg="#0F0F1E" color="white" position="relative">
       <Heading size="2xl" className="neon-text">
         Room: <span style={{ color: "#FF00FF" }}>{roomCode}</span>
       </Heading>
+
       <Text fontSize="xl">Welcome, {playerName}!</Text>
       {host && <Text>Host: {host}</Text>}
-      {judge && <Text>Judge this round: <strong>{judge}</strong></Text>}
-      <Text>Phase: <strong>{phase}</strong></Text>
-      <Text>Round: <strong>{round}</strong> / {roundLimit}</Text>
+      {judge && (
+        <Text>
+          Judge this round: <strong>{judge}</strong>
+        </Text>
+      )}
+
       {category && (
-  <Heading size="3xl" fontFamily="Vivaldi">
-    Rank the Topic: {category}
-  </Heading>
-)}
+        <Box textAlign="center">
+          <Heading size="2xl" fontFamily="Vivaldi">
+            Rank the Topic
+          </Heading>
+
+          <Text fontSize="xl" fontFamily="ScreamingNeon" mt={2}>
+            {category}
+          </Text>
+
+          <HStack justify="center" mt={1} spacing={4}>
+            <Text fontSize="sm" color="gray.400">
+              Phase: <strong>{phase}</strong>
+            </Text>
+            <Text fontSize="sm" color="gray.400">
+              Round: <strong>{round}</strong> / {roundLimit}
+            </Text>
+          </HStack>
+        </Box>
+      )}
+
+      <Text fontSize="sm" position="absolute" top="10px" right="10px" color="gray.400">
+        Room: {roomCode}
+      </Text>
 
       {!gameStarted && isHost && (
         <>
           <Box>
-            <Text fontSize="md" mt={4} color="#FFFF00">Number of Rounds:</Text>
+            <Text fontSize="md" mt={4} color="#FFFF00">
+              Number of Rounds:
+            </Text>
             <Input
               type="number"
               value={roundLimit}
@@ -322,7 +356,10 @@ function RoomPage() {
             />
           </Box>
           <Button
-            onClick={handleStartGame}
+            onClick={() => {
+              handleStartGame();
+              setGameStarted(true);
+            }}
             size="lg"
             bg="transparent"
             color="#00FF00"
@@ -350,7 +387,7 @@ function RoomPage() {
             _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
           />
           <Button
-            onClick={handleEntrySubmit}
+            onClick={() => handleEntrySubmit(entryText)}
             color="#00FF00"
             border="2px solid #00FF00"
             bg="transparent"
@@ -358,37 +395,44 @@ function RoomPage() {
           >
             Submit Entry
           </Button>
-          <Button onClick={handleDoneSubmitting} colorScheme="blue">
+          <Button
+            onClick={() => {
+              handleDoneSubmitting();
+              setDoneSubmitting(true);
+            }}
+            colorScheme="blue"
+          >
             I'm Done Submitting
           </Button>
         </>
       )}
 
-{gameStarted && !isJudge && !isSpectator && entries.length > 0 && (
-  <Box mt={4} border="1px solid #FFFF00" p={3} borderRadius="md" w="300px">
-    <Heading size="sm" mb={2} color="#FFFF00">Submitted Entries:</Heading>
-    <List spacing={1}>
-      {entries.map((entry, i) => (
-        <ListItem key={i} color="whiteAlpha.800">• {entry}</ListItem>
-      ))}
-    </List>
-  </Box>
-)}
+      {gameStarted && !isJudge && !isSpectator && entries.length > 0 && (
+        <Box mt={4} border="1px solid #FFFF00" p={3} borderRadius="md" w="300px">
+          <Heading size="sm" mb={2} color="#FFFF00">
+            Submitted Entries:
+          </Heading>
+          <List spacing={1}>
+            {entries.map((entry, i) => (
+              <ListItem key={i} color="whiteAlpha.800">
+                • {entry}
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
 
       {gameStarted && isJudge && (
-        <Button
-          colorScheme="pink"
-          onClick={handleAdvanceToRankingPhase}
-        >
+        <Button colorScheme="pink" onClick={handleAdvanceToRankingPhase}>
           Advance to Ranking Phase
         </Button>
       )}
 
-{gameStarted && isSpectator && (
-  <Text mt={4} color="gray.300">
-    You're spectating this round. Sit back and enjoy the chaos!
-  </Text>
-)}
+      {gameStarted && isSpectator && (
+        <Text mt={4} color="gray.300">
+          You're spectating this round. Sit back and enjoy the chaos!
+        </Text>
+      )}
 
       <Box border="2px solid #00FFFF" p={4} borderRadius="md" w="300px" mt={6}>
         <Heading size="md" mb={2} color="#00FFFF">
@@ -398,12 +442,14 @@ function RoomPage() {
           <Text>No players yet.</Text>
         ) : (
           players.map((p, i) => (
-            <Text key={i} color="#FFFF00">{p}</Text>
+            <Text key={i} color="#FFFF00">
+              {p}
+            </Text>
           ))
         )}
       </Box>
     </VStack>
   );
-}
+};
 
 export default RoomPage;

@@ -63,6 +63,14 @@ body.loaded {
   pointer-events: none;
 }
 
+.coming-soon {
+  font-family: 'Airstream-NF', cursive;
+  font-size: 3rem;
+  color: #FF00FF;
+  text-shadow: 0 0 10px #FF00FF;
+}
+
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;

@@ -33,7 +33,9 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, SocketServerEv
     methods: ["GET", "POST"],
     credentials: true,
   },
-  transports: ["websocket"],
+  transports: ["websocket", "polling"],
+  pingTimeout: 30000,
+  pingInterval: 25000,
 });
 
 io.on("connection", (socket) => {
@@ -432,12 +434,31 @@ io.on("connection", (socket) => {
     room.judgeName = judgeName;
     room.phase = "ranking";
 
+    if (room.judgeName) {
+      const judgeSocket = room.players.find((p) => p.name === room.judgeName)?.id;
+      if (judgeSocket) {
+        const anonymousEntries = room.entries.map((e) => e.entry);
+        io.to(judgeSocket).emit("sendAllEntries", {
+          entries: anonymousEntries,
+        });
+        console.log(`📨 Updated entries sent to Judge (${room.judgeName})`);
+      }
+    }
+
     console.log(`🔔 Ranking phase started in ${upperCode} by judge ${judgeName}`);
     io.to(upperCode).emit("startRankingPhase", {
       judgeName: room.judgeName,
     });
 
     const judgeSocket = room.players.find((p) => p.name === judgeName)?.id;
+    if (judgeSocket) {
+      const anonymousEntries = room.entries.map((e) => e.entry);
+      io.to(judgeSocket).emit("sendAllEntries", {
+        entries: anonymousEntries,
+      });
+
+      io.to(judgeSocket).emit("startRankingPhase", { judgeName });
+    }
 
     console.log(`🕵️ Judge name: ${judgeName}`);
     console.log(`🕵️ Judge socket ID: ${judgeSocket}`);

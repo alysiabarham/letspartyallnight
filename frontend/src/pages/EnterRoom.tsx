@@ -11,6 +11,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../socket";
+import { Select } from "@chakra-ui/react";
+const [role, setRole] = useState("player");
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -180,6 +182,11 @@ if (!socket.connected) {
         pattern="^[a-zA-Z0-9]*$"
         title="Alphanumeric only"
       />
+      
+<Select placeholder="Choose role" onChange={(e) => setRole(e.target.value)}>
+  <option value="player">Player</option>
+  <option value="spectator">Spectator</option>
+</Select>
 
       <Button
         onClick={handleJoinRoom}

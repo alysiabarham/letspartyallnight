@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Text } from "@chakra-ui/react";
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -100,7 +101,7 @@ const Home: React.FC = () => {
           <div style={styles.imageWrapper}>
             <img src="/images/golden-cow.jpg" alt="Golden Cow Game" style={styles.image} />
             {!showContactForm && (
-              <div style={styles.overlay}>Coming Soon!</div>
+              <Text className="coming-soon">Coming Soon!</Text>
             )}
           </div>
         </div>
