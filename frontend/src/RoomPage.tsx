@@ -40,6 +40,8 @@ function RoomPage() {
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState("player");
 
+  localStorage.setItem("role", role);
+
   useEffect(() => {
   socket.on("playerList", ({ players }) => {
     setPlayers(players); // or whatever your state setter is
@@ -151,6 +153,14 @@ socket.emit("joinGameRoom", {
     });
 
     socket.on('newEntry', ({ entry }) => {
+      socket.on("startRankingPhase", ({ judgeName }) => {
+  console.log("Received startRankingPhase:", judgeName);
+  if (playerName === judgeName) {
+    navigate(`/judge/${roomCode}`, { state: { playerName } });
+  } else {
+    navigate(`/guess/${roomCode}`, { state: { playerName } });
+  }
+});
       setEntries(prev => [...prev, entry]);
     });
 
@@ -185,6 +195,15 @@ socket.emit("joinGameRoom", {
       socket.off('roomState');
     };
   }, [playerName, navigate, roomCode, toast]);
+
+  useEffect(() => {
+  const timeout = setTimeout(() => {
+    if (phase === "waiting") {
+      toast({ title: "Still waiting for judge...", status: "warning" });
+    }
+  }, 10000);
+  return () => clearTimeout(timeout);
+}, [phase]);
 
   useEffect(() => {
     if (players.length > 0 && gameStarted) {
@@ -256,7 +275,7 @@ socket.emit("joinGameRoom", {
         duration: 4000,
         isClosable: true,
       });
-      return;
+      return; // prevent marking as done
     }
     setDoneSubmitting(true);
     toast({

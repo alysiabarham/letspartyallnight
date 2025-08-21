@@ -16,7 +16,7 @@ import { Select } from "@chakra-ui/react";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function EnterRoom() {
-  const [role, setRole] = useState("player");
+  const [role] = useState("player");
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const toast = useToast();
@@ -98,6 +98,10 @@ if (!socket.connected) {
         playerId: playerName.trim(),
       });
 
+if (response.data.error) {
+  toast({ title: response.data.error, status: "error" });
+  return;
+}
       const { room } = response.data;
 
       toast({
@@ -113,9 +117,19 @@ if (!socket.connected) {
         playerName: playerName.trim(),
       });
 
+console.log(`🔧 Sent role: ${role} for ${playerName.trim()}`);
+
       navigate(`/room/${room.code}`, {
         state: { playerName: playerName.trim() },
       });
+      socket.emit("setRole", {
+  roomCode: room.code,
+  playerName: playerName.trim(),
+  role,
+});
+
+localStorage.setItem("role", role);
+
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({

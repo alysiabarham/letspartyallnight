@@ -59,6 +59,7 @@ function createRoom(code: string, hostId: string): Room {
     round: 1,
     roundLimit: 5,
     phase: "entry",
+    phaseStartTime: Date.now(),
     judgeName: null,
     category: null,
     state: "lobby",
@@ -80,6 +81,11 @@ if (require.main === module) {
   });
 }
 const rooms: Record<string, Room> = {};
+function getPlayer(socketId: string, roomCode: string) {
+  const room = rooms[roomCode.toUpperCase()];
+  return room?.players.find((p) => p.id === socketId);
+}
+
 const categories = [
   "Best Ice Cream Flavors",
   "Things That Are Underrated",
@@ -295,6 +301,21 @@ function shuffleArray(arr: string[]): string[] {
 // --- Socket.IO Events ---
 io.on("connection", (socket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
+  socket.on(
+    "setRole",
+    (payload: { roomCode: string; playerName: string; role: "player" | "spectator" }) => {
+      const { roomCode, playerName, role } = payload;
+      const upperCode = roomCode.toUpperCase();
+      const room = rooms[upperCode];
+      if (!room) return;
+
+      const player = room.players.find((p) => p.name === playerName);
+      if (player) {
+        player.role = role;
+        console.log(`🎭 Role set for ${playerName} in ${upperCode}: ${role}`);
+      }
+    },
+  );
 
   socket.on("joinGameRoom", async ({ roomCode, playerName }) => {
     const upperCode = typeof roomCode === "string" ? roomCode.toUpperCase() : "";
@@ -377,6 +398,12 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
+    const host = getPlayer(socket.id, roomCode);
+    if (host?.role !== "player") {
+      console.log(`🚫 Spectator tried to start the game`);
+      return;
+    }
+
     room.roundLimit = roundLimit || 5;
     room.round = 1;
     room.phase = "entry";
@@ -388,6 +415,10 @@ io.on("connection", (socket) => {
     const judgeIndex = (room.round - 1) % room.players.length;
     const judgeName = room.players[judgeIndex]?.name ?? null;
     room.judgeName = judgeName;
+
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${upperCode}`);
 
     console.log(
       `🎮 Game started in ${upperCode} | Round ${room.round}/${room.roundLimit} | Judge: ${judgeName}`,
@@ -408,9 +439,20 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const player = getPlayer(socket.id, roomCode);
+    if (player?.role !== "player") {
+      console.log(`🚫 Spectator ${playerName} tried to submit an entry`);
+      return;
+    }
+
     room.entries.push({ playerName, entry });
+
     console.log(`✍️ Entry from ${playerName} in ${upperCode}: ${entry}`);
-    io.to(upperCode).emit("newEntry", { entry });
+    room.players.forEach((p) => {
+      if (p.role === "spectator") {
+        io.to(p.id).emit("newEntry", { entry });
+      }
+    });
 
     const judgeSocket = room.players.find((p) => p.name === room.judgeName)?.id;
     if (judgeSocket) {
@@ -433,7 +475,16 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
+    const initiator = getPlayer(socket.id, roomCode);
+    if (initiator?.role !== "player") {
+      console.log(`🚫 Spectator tried to start ranking phase`);
+      return;
+    }
+
     room.phase = "ranking";
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`);
     room.judgeName = judgeName;
 
     const judgeSocket = room.players.find((p) => p.name === judgeName)?.id || socket.id;
@@ -457,9 +508,24 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
+    const judge = getPlayer(socket.id, roomCode);
+    if (judge?.hasRanked) {
+      console.log(`🚫 Judge already submitted ranking. Ignoring.`);
+      return;
+    }
+
+    if (judge?.role !== "player") {
+      console.log(`🚫 Spectator tried to submit ranking`);
+      return;
+    }
+
     room.phase = "ranking";
-    const judge = room.players.find((p) => p.name === room.judgeName);
-    if (judge) judge.hasRanked = true;
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`);
+    if (judge?.name === room.judgeName) {
+      judge.hasRanked = true;
+    }
 
     room.judgeRanking = ranking;
     room.selectedEntries = ranking;
@@ -489,14 +555,25 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const player = getPlayer(socket.id, roomCode);
+    if (player?.role !== "player") {
+      console.log(`🚫 Spectator ${playerName} tried to submit a guess`);
+      return;
+    }
+
     room.guesses[playerName] = guess;
-    const player = room.players.find((p) => p.name === playerName);
-    if (player) player.hasGuessed = true;
+    if (player?.name === playerName) {
+      player.hasGuessed = true;
+    }
 
     const guessers = room.players.filter(
       (p) => p.name !== room.judgeName && p.name !== room.hostId,
     );
     const received = guessers.filter((p) => room.guesses[p.name]).length;
+
+    room.phase = "reveal";
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
 
     if (received >= guessers.length) {
       const judgeRanking = room.judgeRanking;
@@ -526,6 +603,11 @@ io.on("connection", (socket) => {
         room.entries = [];
         room.guesses = {};
         room.phase = "entry";
+        room.phaseStartTime = Date.now();
+        io.to(upperCode).emit("phaseChange", { phase: room.phase });
+        console.log(
+          `[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`,
+        );
 
         const nextCategory = categories[Math.floor(Math.random() * categories.length)] ?? "Misc";
         io.to(upperCode).emit("gameStarted", {
@@ -560,6 +642,9 @@ io.on("connection", (socket) => {
     room.selectedEntries = [];
     room.totalScores = {};
     room.phase = "entry";
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`);
 
     const category = categories[Math.floor(Math.random() * categories.length)] ?? "Misc";
     const judgeIndex = (room.round - 1) % room.players.length;
@@ -572,6 +657,22 @@ io.on("connection", (socket) => {
       round: room.round,
     });
   });
+
+  setInterval(() => {
+    Object.entries(rooms).forEach(([code, room]) => {
+      if (room.phase === "ranking" && room.phaseStartTime) {
+        const timeout = 60000; // 1 minute
+        if (Date.now() - room.phaseStartTime > timeout) {
+          room.phase = "reveal";
+          room.phaseStartTime = Date.now();
+          io.to(code).emit("phaseChange", { phase: room.phase });
+          console.log(
+            `[${new Date().toISOString()}] ⏰ Timeout reached. Auto-advancing ${code} to reveal.`,
+          );
+        }
+      }
+    });
+  }, 10000);
 
   socket.on("disconnect", () => {
     const room = Object.values(rooms).find((r) => r.players.some((p) => p.id === socket.id));

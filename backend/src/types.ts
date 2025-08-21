@@ -43,9 +43,12 @@ export type GameStartPayload = {
 export type Player = {
   id: string;
   name: string;
+  role?: "player" | "spectator";
   hasGuessed?: boolean;
   hasRanked?: boolean;
 };
+
+export type Phase = "entry" | "ranking" | "reveal";
 
 export type Room = {
   code: string;
@@ -58,7 +61,8 @@ export type Room = {
   totalScores: Record<string, number>;
   round: number;
   roundLimit: number;
-  phase: "entry" | "ranking";
+  phase: "entry" | "ranking" | "reveal";
+  phaseStartTime?: number;
   judgeName: string | null;
   category: string | null;
   state: "lobby" | "active" | "ended";
