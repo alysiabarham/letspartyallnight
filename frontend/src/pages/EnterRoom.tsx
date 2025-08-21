@@ -183,7 +183,21 @@ if (!socket.connected) {
         title="Alphanumeric only"
       />
       
-<Select placeholder="Choose role" onChange={(e) => setRole(e.target.value)}>
+      <Text fontSize="lg" color="white">
+  Choose your role:
+</Text>
+
+<Select
+  placeholder="Choose role"
+  bg="#1A1A2E"
+  color="#FFFF00"
+  borderColor="#FFFF00"
+  _hover={{ borderColor: "#FFFF00" }}
+  _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
+  _placeholder={{ color: "#FFFF00", opacity: 0.7 }}
+  w="300px"
+  textAlign="center"
+>
   <option value="player">Player</option>
   <option value="spectator">Spectator</option>
 </Select>

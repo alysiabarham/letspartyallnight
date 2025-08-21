@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useEffect } from "react";
+import { useToast } from "@chakra-ui/react";
 import {
   Routes,
   Route,
@@ -33,6 +34,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("Backend URL:", backendUrl);
 
 function LandingPageContent() {
+  const toast = useToast();
   const [roomCodeInput, setRoomCodeInput] = React.useState("");
   const [playerNameInput, setPlayerNameInput] = React.useState("");
   const navigate = useNavigate();
@@ -47,10 +49,12 @@ function LandingPageContent() {
 
   const handleCreateRoom = async () => {
     if (!playerNameInput.trim()) {
-      console.log("Toast:", {
-        title: "Enter your name.",
-        status: "warning",
-      });
+      toast({
+  title: "Enter your name.",
+  status: "warning",
+  duration: 3000,
+  isClosable: true,
+});
       return;
     }
 
@@ -61,30 +65,36 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
-      console.log("Toast:", {
-        title: "Room created!",
-        description: `Code: ${roomCode}`,
-        status: "success",
-      });
+      toast({
+  title: "Room created!",
+  description: `Code: ${roomCode}`,
+  status: "success",
+  duration: 3000,
+  isClosable: true,
+});
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostId });
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
       console.error("Create error:", error.response?.data || error.message);
-      console.log("Toast:", {
-        title: "Error creating room.",
-        description: error.response?.data?.error || "Try again later.",
-        status: "error",
-      });
+      toast({
+  title: "Error creating room.",
+  description: error.response?.data?.error || "Try again later.",
+  status: "error",
+  duration: 3000,
+  isClosable: true,
+});
     }
   };
 
   const handleJoinRoom = async () => {
     if (!roomCodeInput.trim() || !playerNameInput.trim()) {
-      console.log("Toast:", {
-        title: "Enter name and code.",
-        status: "warning",
-      });
+      toast({
+  title: "Enter name and code.",
+  status: "warning",
+  duration: 3000,
+  isClosable: true,
+});
       return;
     }
 
@@ -97,11 +107,13 @@ function LandingPageContent() {
 
       const { room } = response.data;
 
-      console.log("Toast:", {
-        title: "Room joined!",
-        description: `Joined: ${room.code}`,
-        status: "success",
-      });
+      toast({
+  title: "Room joined!",
+  description: `Joined: ${room.code}`,
+  status: "success",
+  duration: 3000,
+  isClosable: true,
+});
 
       socket.emit("joinGameRoom", {
         roomCode: room.code,
@@ -111,11 +123,13 @@ function LandingPageContent() {
       navigate(`/room/${room.code}`, { state: { playerName: playerId } });
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
-      console.log("Toast:", {
-        title: "Join failed.",
-        description: error.response?.data?.error || "Room not found or full.",
-        status: "error",
-      });
+      toast({
+  title: "Join failed.",
+  description: error.response?.data?.error || "Room not found or full.",
+  status: "error",
+  duration: 3000,
+  isClosable: true,
+});
     }
   };
 
