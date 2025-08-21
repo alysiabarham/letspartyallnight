@@ -81,9 +81,12 @@ const Home: React.FC = () => {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>
-        Let’s Party All<br />Night! 🎉
-      </h1>
+      <h1 className="neon-title">
+  <span className="word-pink">Let’s</span>{" "}
+  <span className="word-blue">Party</span>{" "}
+  <span className="word-yellow">All</span>{" "}
+  <span className="word-orange">Night!</span> 🎉
+</h1>
 
       <div style={styles.imageRow}>
         <div
@@ -101,7 +104,7 @@ const Home: React.FC = () => {
           <div style={styles.imageWrapper}>
             <img src="/images/golden-cow.jpg" alt="Golden Cow Game" style={styles.image} />
             {!showContactForm && (
-              <Text className="coming-soon">Coming Soon!</Text>
+              <div className="coming-soon-glow">Coming Soon!</div>
             )}
           </div>
         </div>

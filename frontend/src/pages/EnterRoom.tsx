@@ -12,11 +12,11 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../socket";
 import { Select } from "@chakra-ui/react";
-const [role, setRole] = useState("player");
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function EnterRoom() {
+  const [role, setRole] = useState("player");
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const toast = useToast();

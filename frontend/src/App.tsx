@@ -4,7 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
-  BrowserRouter as Router,
+  HashRouter as Router,
   useNavigate,
 } from "react-router-dom";
 import {
@@ -15,7 +15,6 @@ import {
   Text,
   Input,
   Button,
-  useToast,
 } from "@chakra-ui/react";
 import axios from "axios";
 import "./App.css";
@@ -31,11 +30,11 @@ import ResultsPage from "./ResultsPage";
 import FinalResultsPage from "./FinalResultsPage"; // ✅ New
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
+console.log("Backend URL:", backendUrl);
 
 function LandingPageContent() {
   const [roomCodeInput, setRoomCodeInput] = React.useState("");
   const [playerNameInput, setPlayerNameInput] = React.useState("");
-  const toast = useToast();
   const navigate = useNavigate();
 
   const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,11 +47,9 @@ function LandingPageContent() {
 
   const handleCreateRoom = async () => {
     if (!playerNameInput.trim()) {
-      toast({
+      console.log("Toast:", {
         title: "Enter your name.",
         status: "warning",
-        duration: 3000,
-        isClosable: true,
       });
       return;
     }
@@ -64,35 +61,29 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
-      toast({
+      console.log("Toast:", {
         title: "Room created!",
         description: `Code: ${roomCode}`,
         status: "success",
-        duration: 5000,
-        isClosable: true,
       });
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostId });
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
       console.error("Create error:", error.response?.data || error.message);
-      toast({
+      console.log("Toast:", {
         title: "Error creating room.",
         description: error.response?.data?.error || "Try again later.",
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
   const handleJoinRoom = async () => {
     if (!roomCodeInput.trim() || !playerNameInput.trim()) {
-      toast({
+      console.log("Toast:", {
         title: "Enter name and code.",
         status: "warning",
-        duration: 3000,
-        isClosable: true,
       });
       return;
     }
@@ -106,12 +97,10 @@ function LandingPageContent() {
 
       const { room } = response.data;
 
-      toast({
+      console.log("Toast:", {
         title: "Room joined!",
         description: `Joined: ${room.code}`,
         status: "success",
-        duration: 5000,
-        isClosable: true,
       });
 
       socket.emit("joinGameRoom", {
@@ -122,21 +111,24 @@ function LandingPageContent() {
       navigate(`/room/${room.code}`, { state: { playerName: playerId } });
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
-      toast({
+      console.log("Toast:", {
         title: "Join failed.",
         description: error.response?.data?.error || "Room not found or full.",
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#1A1A2E">
-      <Heading as="h1" size="2xl" className="neon-text">
-        Let's Party All Night!
-      </Heading>
+      <div className="no-chakra">
+        <h1 className="neon-title debug-flicker">
+          <span className="word-pink">L<span className="flicker-letter">e</span>t’s</span>{' '}
+          <span className="word-blue"><span className="flicker-letter">P</span>arty</span>{' '}
+          <span className="word-yellow">All</span>{' '}
+          <span className="word-orange">Ni<span className="flicker-letter">g</span>h<span className="flicker-letter">t</span>!</span>
+        </h1>
+      </div>
       <Text fontSize="lg" color="white">
         Host or join a game with friends.
       </Text>
@@ -205,7 +197,9 @@ function LandingPageContent() {
 }
 
 function App() {
+  console.log("✅ App component mounted");
   useEffect(() => {
+    document.body.classList.add("loaded");
     socket.onAny((event, payload) => {
       console.log(`📡 [Global] Received event: ${event}`, payload);
     });
@@ -226,13 +220,13 @@ function App() {
         <Box minH="100vh">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/enter-room" element={<EnterRoom />} /> {/* ✅ Added */}
+            <Route path="/enter-room" element={<EnterRoom />} />
             <Route path="/join" element={<LandingPageContent />} />
             <Route path="/room/:roomCode" element={<RoomPage />} />
             <Route path="/judge/:roomCode" element={<JudgeRankingPage />} />
             <Route path="/guess/:roomCode" element={<GuesserRankingPage />} />
             <Route path="/results/:roomCode" element={<ResultsPage />} />
-            <Route path="/final/:roomCode" element={<FinalResultsPage />} /> {/* ✅ New */}
+            <Route path="/final/:roomCode" element={<FinalResultsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Box>
