@@ -7,13 +7,12 @@ export default defineConfig({
   build: {
     target: "es2015", // Safari needs ES2015+
   },
-server: {
-  proxy: {
-    '/socket.io': {
-      target: 'https://letspartyallnight-backend.onrender.com',
-      ws: true,
+  server: {
+    proxy: {
+      "/socket.io": {
+        target: "https://letspartyallnight-backend.onrender.com",
+        ws: true,
+      },
     },
   },
-},
-
 });

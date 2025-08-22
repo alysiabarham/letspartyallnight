@@ -1,22 +1,13 @@
-// src/pages/EnterRoom.tsx
 import React, { useState } from "react";
-import {
-  VStack,
-  Heading,
-  Text,
-  Input,
-  Button,
-  useToast,
-} from "@chakra-ui/react";
+import { VStack, Heading, Text, Input, Button, useToast, Select } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { socket } from "../socket";
-import { Select } from "@chakra-ui/react";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 export default function EnterRoom() {
-  const [role] = useState("player");
+  const [role, setRole] = useState("player");
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const toast = useToast();
@@ -31,34 +22,26 @@ export default function EnterRoom() {
   };
 
   const handleCreateRoom = async () => {
-    console.log("Creating room with name:", playerName);
     if (!playerName.trim()) {
-      toast({
-        title: "Enter your name.",
-        status: "warning",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Enter your name.", status: "warning" });
       return;
     }
-if (!socket.connected) {
-  toast({ title: "Socket not connected", status: "error" });
-  return;
-}
+    if (!socket.connected) {
+      toast({ title: "Socket not connected", status: "error" });
+      return;
+    }
+
     try {
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId: playerName.trim(),
       });
 
-      console.log("Create response:", response.data);
       const { roomCode } = response.data;
 
       toast({
         title: "Room created!",
         description: `Code: ${roomCode}`,
         status: "success",
-        duration: 5000,
-        isClosable: true,
       });
 
       socket.emit("joinGameRoom", {
@@ -66,29 +49,29 @@ if (!socket.connected) {
         playerName: playerName.trim(),
       });
 
+      socket.emit("setRole", {
+        roomCode,
+        playerName: playerName.trim(),
+        role,
+      });
+
+      localStorage.setItem("role", role);
+
       navigate(`/room/${roomCode}`, {
         state: { playerName: playerName.trim() },
       });
     } catch (error: any) {
-      console.error("Create error:", error.response?.data || error.message);
       toast({
         title: "Error creating room.",
         description: error.response?.data?.error || "Try again later.",
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
   const handleJoinRoom = async () => {
     if (!playerName.trim() || !roomCode.trim()) {
-      toast({
-        title: "Enter name and code.",
-        status: "warning",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Enter name and code.", status: "warning" });
       return;
     }
 
@@ -98,18 +81,17 @@ if (!socket.connected) {
         playerId: playerName.trim(),
       });
 
-if (response.data.error) {
-  toast({ title: response.data.error, status: "error" });
-  return;
-}
+      if (response.status === 409 || response.data.error) {
+        toast({ title: response.data.error, status: "error" });
+        return;
+      }
+
       const { room } = response.data;
 
       toast({
         title: "Room joined!",
         description: `Joined: ${room.code}`,
         status: "success",
-        duration: 5000,
-        isClosable: true,
       });
 
       socket.emit("joinGameRoom", {
@@ -117,40 +99,37 @@ if (response.data.error) {
         playerName: playerName.trim(),
       });
 
-console.log(`🔧 Sent role: ${role} for ${playerName.trim()}`);
+      socket.emit("setRole", {
+        roomCode: room.code,
+        playerName: playerName.trim(),
+        role,
+      });
+
+      localStorage.setItem("role", role);
 
       navigate(`/room/${room.code}`, {
         state: { playerName: playerName.trim() },
       });
-      socket.emit("setRole", {
-  roomCode: room.code,
-  playerName: playerName.trim(),
-  role,
-});
-
-localStorage.setItem("role", role);
-
     } catch (error: any) {
-      console.error("Join error:", error.response?.data || error.message);
       toast({
         title: "Join failed.",
         description: error.response?.data?.error || "Room not found or full.",
         status: "error",
-        duration: 5000,
-        isClosable: true,
       });
     }
   };
 
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#0F0F1E">
-      <Heading size="3xl" className="rank-title" style={{ fontFamily: 'Vivaldi' }}>
-  Rank the Topic
-</Heading>
-      <Text fontSize="2xl" className="sub-heading" style={{ fontFamily: 'ScreamingNeon' }}>
-  Enter the Party Zone 🎉
-</Text>
-      <Text className="sub-heading" color="white">Room: {roomCode}</Text>
+      <Heading size="3xl" className="rank-title" style={{ fontFamily: "Vivaldi" }}>
+        Rank the Topic
+      </Heading>
+      <Text fontSize="2xl" className="sub-heading" style={{ fontFamily: "ScreamingNeon" }}>
+        Enter the Party Zone 🎉
+      </Text>
+      <Text className="sub-heading" color="white">
+        Room: {roomCode}
+      </Text>
 
       <Input
         placeholder="Your Name"
@@ -180,7 +159,9 @@ localStorage.setItem("role", role);
         CREATE ROOM
       </Button>
 
-      <Text fontSize="lg" color="white">OR</Text>
+      <Text fontSize="lg" color="white">
+        OR
+      </Text>
 
       <Input
         placeholder="Room Code"
@@ -196,25 +177,26 @@ localStorage.setItem("role", role);
         pattern="^[a-zA-Z0-9]*$"
         title="Alphanumeric only"
       />
-      
-      <Text fontSize="lg" color="white">
-  Choose your role:
-</Text>
 
-<Select
-  placeholder="Choose role"
-  bg="#1A1A2E"
-  color="#FFFF00"
-  borderColor="#FFFF00"
-  _hover={{ borderColor: "#FFFF00" }}
-  _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
-  _placeholder={{ color: "#FFFF00", opacity: 0.7 }}
-  w="300px"
-  textAlign="center"
->
-  <option value="player">Player</option>
-  <option value="spectator">Spectator</option>
-</Select>
+      <Text fontSize="lg" color="white">
+        Choose your role:
+      </Text>
+
+      <Select
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
+        bg="#1A1A2E"
+        color="#FFFF00"
+        borderColor="#FFFF00"
+        _hover={{ borderColor: "#FFFF00" }}
+        _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
+        _placeholder={{ color: "#FFFF00", opacity: 0.7 }}
+        w="300px"
+        textAlign="center"
+      >
+        <option value="player">Player</option>
+        <option value="spectator">Spectator</option>
+      </Select>
 
       <Button
         onClick={handleJoinRoom}

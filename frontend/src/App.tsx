@@ -1,22 +1,8 @@
 // src/App.tsx
 import React, { useEffect } from "react";
 import { useToast } from "@chakra-ui/react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  HashRouter as Router,
-  useNavigate,
-} from "react-router-dom";
-import {
-  ChakraProvider,
-  Box,
-  VStack,
-  Heading,
-  Text,
-  Input,
-  Button,
-} from "@chakra-ui/react";
+import { Routes, Route, Navigate, HashRouter as Router, useNavigate } from "react-router-dom";
+import { ChakraProvider, Box, VStack, Heading, Text, Input, Button } from "@chakra-ui/react";
 import axios from "axios";
 import "./App.css";
 import { socket } from "./socket";
@@ -50,11 +36,11 @@ function LandingPageContent() {
   const handleCreateRoom = async () => {
     if (!playerNameInput.trim()) {
       toast({
-  title: "Enter your name.",
-  status: "warning",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Enter your name.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
 
@@ -66,35 +52,35 @@ function LandingPageContent() {
       const { roomCode } = response.data;
 
       toast({
-  title: "Room created!",
-  description: `Code: ${roomCode}`,
-  status: "success",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Room created!",
+        description: `Code: ${roomCode}`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostId });
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
       console.error("Create error:", error.response?.data || error.message);
       toast({
-  title: "Error creating room.",
-  description: error.response?.data?.error || "Try again later.",
-  status: "error",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Error creating room.",
+        description: error.response?.data?.error || "Try again later.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
   const handleJoinRoom = async () => {
     if (!roomCodeInput.trim() || !playerNameInput.trim()) {
       toast({
-  title: "Enter name and code.",
-  status: "warning",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Enter name and code.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
       return;
     }
 
@@ -108,12 +94,12 @@ function LandingPageContent() {
       const { room } = response.data;
 
       toast({
-  title: "Room joined!",
-  description: `Joined: ${room.code}`,
-  status: "success",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Room joined!",
+        description: `Joined: ${room.code}`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
 
       socket.emit("joinGameRoom", {
         roomCode: room.code,
@@ -124,12 +110,12 @@ function LandingPageContent() {
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({
-  title: "Join failed.",
-  description: error.response?.data?.error || "Room not found or full.",
-  status: "error",
-  duration: 3000,
-  isClosable: true,
-});
+        title: "Join failed.",
+        description: error.response?.data?.error || "Room not found or full.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -137,10 +123,16 @@ function LandingPageContent() {
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#1A1A2E">
       <div className="no-chakra">
         <h1 className="neon-title debug-flicker">
-          <span className="word-pink">L<span className="flicker-letter">e</span>t’s</span>{' '}
-          <span className="word-blue"><span className="flicker-letter">P</span>arty</span>{' '}
-          <span className="word-yellow">All</span>{' '}
-          <span className="word-orange">Ni<span className="flicker-letter">g</span>h<span className="flicker-letter">t</span>!</span>
+          <span className="word-pink">
+            L<span className="flicker-letter">e</span>t’s
+          </span>{" "}
+          <span className="word-blue">
+            <span className="flicker-letter">P</span>arty
+          </span>{" "}
+          <span className="word-yellow">All</span>{" "}
+          <span className="word-orange">
+            Ni<span className="flicker-letter">g</span>h<span className="flicker-letter">t</span>!
+          </span>
         </h1>
       </div>
       <Text fontSize="lg" color="white">

@@ -1,10 +1,4 @@
-import {
-  VStack,
-  Heading,
-  Box,
-  Text,
-  Button,
-} from "@chakra-ui/react";
+import { VStack, Heading, Box, Text, Button } from "@chakra-ui/react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { socket } from "./socket";
 
@@ -14,17 +8,15 @@ export default function FinalResultsPage() {
   const { roomCode } = useParams();
   const scores: Record<string, number> | null = location.state?.scores || null;
 
-let sorted: [string, number][] = [];
-let topScore = 0;
-let winners: string[] = [];
+  let sorted: [string, number][] = [];
+  let topScore = 0;
+  let winners: string[] = [];
 
-if (scores) {
-  sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  topScore = sorted[0]?.[1] || 0;
-  winners = sorted
-    .filter(([_, score]) => score === topScore)
-    .map(([name]) => name);
-}
+  if (scores) {
+    sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    topScore = sorted[0]?.[1] || 0;
+    winners = sorted.filter(([_, score]) => score === topScore).map(([name]) => name);
+  }
 
   const handlePlayAgain = () => {
     socket.emit("restartGame", { roomCode });
@@ -46,32 +38,32 @@ if (scores) {
       </Text>
 
       {scores ? (
-  <>
-    <Box w="100%" maxW="400px">
-      {sorted.map(([name, score], idx) => (
-        <Box
-          key={name}
-          p={3}
-          bg={score === topScore ? "#FFD700" : "#2C2C3E"}
-          borderRadius="md"
-          w="100%"
-        >
-          #{idx + 1}: {name} — {score} pts
-        </Box>
-      ))}
-    </Box>
+        <>
+          <Box w="100%" maxW="400px">
+            {sorted.map(([name, score], idx) => (
+              <Box
+                key={name}
+                p={3}
+                bg={score === topScore ? "#FFD700" : "#2C2C3E"}
+                borderRadius="md"
+                w="100%"
+              >
+                #{idx + 1}: {name} — {score} pts
+              </Box>
+            ))}
+          </Box>
 
-    <Text fontSize="lg" color="cyan.300">
-      {winners.length === 1
-        ? `🎉 Winner: ${winners[0]}`
-        : `🎉 Tie! Winners: ${winners.join(", ")}`}
-    </Text>
-  </>
-) : (
-  <Text fontSize="lg" color="red.300">
-    ❌ No score data found. Please return to the lobby and start a new game.
-  </Text>
-)}
+          <Text fontSize="lg" color="cyan.300">
+            {winners.length === 1
+              ? `🎉 Winner: ${winners[0]}`
+              : `🎉 Tie! Winners: ${winners.join(", ")}`}
+          </Text>
+        </>
+      ) : (
+        <Text fontSize="lg" color="red.300">
+          ❌ No score data found. Please return to the lobby and start a new game.
+        </Text>
+      )}
 
       <VStack spacing={4} mt={8}>
         <Button

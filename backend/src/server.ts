@@ -418,6 +418,16 @@ io.on("connection", (socket) => {
 
     room.phaseStartTime = Date.now();
     io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    io.to(upperCode).emit("roomState", {
+      players: room.players,
+      phase: room.phase,
+      round: room.round,
+      judgeName: room.judgeName,
+      category: category ?? "Misc",
+    });
+
+    room.phaseStartTime = Date.now();
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
     console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${upperCode}`);
 
     console.log(

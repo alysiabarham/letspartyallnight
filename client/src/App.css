@@ -41,8 +41,8 @@ button:hover {
 }
 
 button:disabled {
-    background-color: #888;
-    cursor: not-allowed;
+  background-color: #888;
+  cursor: not-allowed;
 }
 
 ul {
@@ -62,15 +62,15 @@ li {
 
 /* Small adjustments for list items in DND */
 .App-header ul {
-    width: 80%; /* Give the list a defined width */
-    max-width: 400px;
-    margin: 20px auto; /* Center the list */
+  width: 80%; /* Give the list a defined width */
+  max-width: 400px;
+  margin: 20px auto; /* Center the list */
 }
 
 .App-header li {
-    background-color: #fff;
-    color: #282c34;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    font-size: 1em;
+  background-color: #fff;
+  color: #282c34;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 1em;
 }

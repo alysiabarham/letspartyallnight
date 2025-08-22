@@ -82,11 +82,9 @@ const Home: React.FC = () => {
   return (
     <div style={styles.container}>
       <h1 className="neon-title">
-  <span className="word-pink">Let’s</span>{" "}
-  <span className="word-blue">Party</span>{" "}
-  <span className="word-yellow">All</span>{" "}
-  <span className="word-orange">Night!</span> 🎉
-</h1>
+        <span className="word-pink">Let’s</span> <span className="word-blue">Party</span>{" "}
+        <span className="word-yellow">All</span> <span className="word-orange">Night!</span> 🎉
+      </h1>
 
       <div style={styles.imageRow}>
         <div
@@ -103,28 +101,52 @@ const Home: React.FC = () => {
         <div style={styles.imageButton}>
           <div style={styles.imageWrapper}>
             <img src="/images/golden-cow.jpg" alt="Golden Cow Game" style={styles.image} />
-            {!showContactForm && (
-              <div className="coming-soon-glow">Coming Soon!</div>
-            )}
+            {!showContactForm && <div className="coming-soon-glow">Coming Soon!</div>}
           </div>
         </div>
       </div>
 
       <div style={styles.buttonRow}>
-        <button onClick={handleAccountClick} style={styles.button}>Account</button>
-        <button onClick={() => setShowContactForm(true)} style={styles.button}>Contact Us</button>
+        <button onClick={handleAccountClick} style={styles.button}>
+          Account
+        </button>
+        <button onClick={() => setShowContactForm(true)} style={styles.button}>
+          Contact Us
+        </button>
       </div>
 
       {showContactForm && (
         <div style={styles.modal}>
           <div ref={modalRef} style={styles.formContainer} onMouseDown={startDrag}>
-            <button onClick={() => setShowContactForm(false)} style={styles.closeButton}>✖</button>
+            <button onClick={() => setShowContactForm(false)} style={styles.closeButton}>
+              ✖
+            </button>
             <h2>Contact Us</h2>
-            <p>Send a message to: <strong>example@letspartyallnight.games</strong></p>
+            <p>
+              Send a message to: <strong>example@letspartyallnight.games</strong>
+            </p>
             <form onSubmit={handleSubmit}>
-              <input name="name" placeholder="Your name" value={formData.name} onChange={handleInputChange} style={styles.input} />
-              <input name="email" placeholder="Your email" value={formData.email} onChange={handleInputChange} style={styles.input} />
-              <textarea name="message" placeholder="Your message" value={formData.message} onChange={handleInputChange} style={styles.textarea} />
+              <input
+                name="name"
+                placeholder="Your name"
+                value={formData.name}
+                onChange={handleInputChange}
+                style={styles.input}
+              />
+              <input
+                name="email"
+                placeholder="Your email"
+                value={formData.email}
+                onChange={handleInputChange}
+                style={styles.input}
+              />
+              <textarea
+                name="message"
+                placeholder="Your message"
+                value={formData.message}
+                onChange={handleInputChange}
+                style={styles.textarea}
+              />
               <input
                 name="honeypot"
                 value={formData.honeypot}
@@ -133,7 +155,9 @@ const Home: React.FC = () => {
                 autoComplete="off"
               />
               {formError && <p style={{ color: "red" }}>{formError}</p>}
-              <button type="submit" style={styles.submitButton}>Send</button>
+              <button type="submit" style={styles.submitButton}>
+                Send
+              </button>
             </form>
           </div>
         </div>
