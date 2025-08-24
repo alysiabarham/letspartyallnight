@@ -88,11 +88,9 @@ export default function EnterRoom() {
 
       const { room } = response.data;
 
-      toast({
-        title: "Room joined!",
-        description: `Joined: ${room.code}`,
-        status: "success",
-      });
+      socket.on("playerJoined", ({ playerName }) => {
+  toast({ title: `${playerName} joined the room!`, status: "success" });
+});
 
       socket.emit("joinGameRoom", {
         roomCode: room.code,
@@ -183,20 +181,20 @@ export default function EnterRoom() {
       </Text>
 
       <Select
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        bg="#1A1A2E"
-        color="#FFFF00"
-        borderColor="#FFFF00"
-        _hover={{ borderColor: "#FFFF00" }}
-        _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
-        _placeholder={{ color: "#FFFF00", opacity: 0.7 }}
-        w="300px"
-        textAlign="center"
-      >
-        <option value="player">Player</option>
-        <option value="spectator">Spectator</option>
-      </Select>
+  value={role}
+  onChange={(e) => setRole(e.target.value as "player" | "spectator")}
+  bg="#1A1A2E"
+  color="#FFFF00"
+  borderColor="#FFFF00"
+  _hover={{ borderColor: "#FFFF00" }}
+  _focus={{ borderColor: "#FFFF00", boxShadow: "0 0 5px #FFFF00" }}
+  _placeholder={{ color: "#FFFF00", opacity: 0.7 }}
+  w="300px"
+  textAlign="center"
+>
+  <option value="player">Player</option>
+  <option value="spectator">Spectator</option>
+</Select>
 
       <Button
         onClick={handleJoinRoom}
