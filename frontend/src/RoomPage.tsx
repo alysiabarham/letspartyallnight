@@ -105,7 +105,6 @@ function RoomPage() {
         if (axios.isAxiosError(error)) {
           const axiosError = error as AxiosError;
           if (axiosError.response?.status === 409) {
-            toast({ title: "Name already taken.", status: "error" });
           } else {
             toast({ title: "Join failed", description: axiosError.message, status: "error" });
           }
