@@ -160,6 +160,8 @@ function RoomPage() {
       setDoneSubmitting(false);
       setPhase("entry");
       navigate(`/entry/${roomCode}`, { state: { playerName } });
+      console.log("Navigating to /entry:", roomCode);
+      navigate(`/entry/${roomCode}`, { state: { playerName } });
       toast({
         title: "Game Started!",
         status: "info",
@@ -195,6 +197,12 @@ function RoomPage() {
       const me = (players as { name: string; role?: "player" | "spectator" }[]).find(
         (p) => p.name === playerName,
       );
+      toast({
+        title: "Room joined!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
       if (me?.role) {
         setRole(me.role);
         toast({
