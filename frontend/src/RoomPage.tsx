@@ -268,7 +268,6 @@ function RoomPage() {
 
   const handleStartGame = () => {
     socket.emit("startGame", { roomCode });
-    socket.emit("gameStarted", { roomCode, roundLimit });
     toast({ title: "Game started!", status: "success", duration: 3000, isClosable: true });
   };
 
