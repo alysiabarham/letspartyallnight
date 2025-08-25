@@ -159,9 +159,8 @@ function RoomPage() {
       setCategory(category);
       setDoneSubmitting(false);
       setPhase("entry");
-      navigate(`/entry/${roomCode}`, { state: { playerName } });
+      navigate(`/room/${roomCode}`, { state: { playerName } });
       console.log("Navigating to /entry:", roomCode);
-      navigate(`/entry/${roomCode}`, { state: { playerName } });
       toast({
         title: "Game Started!",
         status: "info",
@@ -172,7 +171,6 @@ function RoomPage() {
 
     socket.on("newEntry", ({ entry }) => {
       socket.on("startRankingPhase", ({ judgeName }) => {
-        console.log("Received startRankingPhase:", judgeName);
         if (playerName === judgeName) {
           navigate(`/judge/${roomCode}`, { state: { playerName } });
         } else {
