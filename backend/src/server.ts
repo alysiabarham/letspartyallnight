@@ -378,7 +378,7 @@ io.on("connection", (socket) => {
   });
 
   // --- Game Lifecycle Events ---
-  socket.on("gameStarted", (payload: { roomCode: string; roundLimit?: number }) => {
+  socket.on("startGame", (payload: { roomCode: string; roundLimit?: number }) => {
     const { roomCode, roundLimit } = payload;
     const upperCode = roomCode.toUpperCase();
     const room = rooms[upperCode];
