@@ -341,17 +341,18 @@ io.on("connection", (socket) => {
     }
 
     const room = rooms[upperCode];
-    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
-    if (nameTaken) {
-      socket.emit("joinError", { message: "Name already taken in this room." });
-      return;
-    }
 
     const existing = room.players.some((p) => p.name === playerName);
     if (existing) {
       room.players = room.players.map((p) => (p.name === playerName ? { ...p, id: socket.id } : p));
     } else {
       room.players.push({ id: socket.id, name: playerName });
+    }
+
+    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
+    if (nameTaken) {
+      socket.emit("joinError", { message: "Name already taken in this room." });
+      return;
     }
 
     console.log(`🌐 ${playerName} (${socket.id}) joined ${upperCode}`);
@@ -383,6 +384,15 @@ io.on("connection", (socket) => {
     const upperCode = roomCode.toUpperCase();
     const room = rooms[upperCode];
     if (!room) return;
+
+    // 🔄 Reset room state before starting
+    room.phase = "entry";
+    room.round = 1;
+    room.entries = [];
+    room.guesses = {};
+    room.totalScores = {};
+    room.judgeName = null;
+    room.phaseStartTime = Date.now();
 
     const host = getPlayer(socket.id, upperCode); // ✅ use upperCode here
     if (host?.role !== "player") {
