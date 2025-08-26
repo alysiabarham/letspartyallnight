@@ -3,6 +3,7 @@ import { RankingPayload, SubmitGuessPayload, Room, PlayerResult, Player, Phase }
 export type ClientToServerEvents = {
   "player:join": (data: { name: string; roomId: string }) => void;
   joinGameRoom: (payload: { roomCode: string; playerName: string }) => void;
+  startGame: (payload: { roomCode: string; roundLimit?: number }) => void;
   gameStarted: (payload: { roomCode: string; roundLimit?: number }) => void;
   submitEntry: (payload: { roomCode: string; playerName: string; entry: string }) => void;
   startRankingPhase: (payload: { roomCode: string; judgeName: string }) => void;
