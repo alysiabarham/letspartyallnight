@@ -384,7 +384,7 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
-    const host = getPlayer(socket.id, roomCode);
+    const host = getPlayer(socket.id, upperCode); // ✅ use upperCode here
     if (host?.role !== "player") {
       console.log(`🚫 Spectator tried to start the game`);
       return;
@@ -401,8 +401,8 @@ io.on("connection", (socket) => {
     const judgeIndex = (room.round - 1) % room.players.length;
     const judgeName = room.players[judgeIndex]?.name ?? null;
     room.judgeName = judgeName;
-
     room.phaseStartTime = Date.now();
+
     io.to(upperCode).emit("phaseChange", { phase: room.phase });
     io.to(upperCode).emit("roomState", {
       players: room.players,
@@ -412,26 +412,11 @@ io.on("connection", (socket) => {
       category: category ?? "Misc",
     });
 
-    room.phase = "entry";
-    room.phaseStartTime = Date.now();
-
-    io.to(upperCode).emit("phaseChange", { phase: room.phase });
-
-    io.to(upperCode).emit("roomState", {
-      players: room.players,
-      phase: room.phase,
-      round: room.round,
-      judgeName: room.judgeName,
-      category: category ?? "Misc",
-    });
-
-    room.phaseStartTime = Date.now();
-    io.to(upperCode).emit("phaseChange", { phase: room.phase });
     console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${upperCode}`);
-
     console.log(
       `🎮 Game started in ${upperCode} | Round ${room.round}/${room.roundLimit} | Judge: ${judgeName}`,
     );
+
     io.to(upperCode).emit("gameStarted", {
       category: category ?? "Misc",
       round: room.round,
