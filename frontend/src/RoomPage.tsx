@@ -195,12 +195,15 @@ function RoomPage() {
       const me = (players as { name: string; role?: "player" | "spectator" }[]).find(
         (p) => p.name === playerName,
       );
-      toast({
-        title: "Room joined!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      if (!toast.isActive("room-joined")) {
+        toast({
+          id: "room-joined",
+          title: "Room joined!",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
       if (me?.role) {
         setRole(me.role);
         toast({
@@ -220,6 +223,15 @@ function RoomPage() {
     });
 
     socket.on("phaseChange", ({ phase }) => {
+      socket.on("toastWarning", ({ message }) => {
+        toast({
+          title: "Cannot advance yet",
+          description: message,
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+      });
       setPhase(phase);
       if (phase === "entry") {
         navigate(`/entry/${roomCode}`, { state: { playerName } });
@@ -237,6 +249,7 @@ function RoomPage() {
       socket.off("newEntry");
       socket.off("startRankingPhase");
       socket.off("roomState");
+      socket.off("toastWarning");
     };
   }, [playerName, navigate, roomCode, toast]);
 
@@ -349,24 +362,7 @@ function RoomPage() {
     });
   };
 
-  useEffect(() => {
-    if (!entries || entries.length === 0) {
-      console.log("❓ No entries received, re-requesting...");
-      socket.emit("requestEntries", { roomCode });
-    }
-  }, [entries, roomCode]);
-
   const handleAdvanceToRankingPhase = () => {
-    if (entries.length < 5) {
-      toast({
-        title: "Not enough entries yet.",
-        description: "At least 5 needed.",
-        status: "warning",
-        duration: 4000,
-        isClosable: true,
-      });
-      return;
-    }
     socket.emit("startRankingPhase", { roomCode, judgeName: judge });
   };
 
@@ -376,7 +372,7 @@ function RoomPage() {
 
   const isJudge = playerName === judge;
   const isHost = playerName === host;
-  const isSpectator = !players.map((p) => p.toLowerCase()).includes(playerName.toLowerCase());
+  const isSpectator = role === "spectator";
 
   return (
     <VStack spacing={6} p={6} minH="100vh" bg="#0F0F1E" color="white" position="relative">
@@ -482,10 +478,8 @@ function RoomPage() {
             Submit Entry
           </Button>
           <Button
-            onClick={() => {
-              handleDoneSubmitting();
-              setDoneSubmitting(true);
-            }}
+            onClick={handleDoneSubmitting}
+            isDisabled={new Set(entries.map((e) => e.toLowerCase())).size < 5}
             colorScheme="blue"
           >
             I'm Done Submitting

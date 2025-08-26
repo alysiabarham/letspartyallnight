@@ -39,6 +39,7 @@ export type ServerToClientEvents = {
     results: Record<string, PlayerResult>;
   }) => void;
   finalScores: (payload: { scores: Record<string, number> }) => void;
+  toastWarning: (payload: { message: string }) => void;
 };
 
 export type GameState = {

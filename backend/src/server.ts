@@ -342,17 +342,15 @@ io.on("connection", (socket) => {
 
     const room = rooms[upperCode];
 
-    const existing = room.players.some((p) => p.name === playerName);
-    if (existing) {
-      room.players = room.players.map((p) => (p.name === playerName ? { ...p, id: socket.id } : p));
+    const existingPlayer = room.players.find((p) => p.name === playerName);
+    if (existingPlayer) {
+      if (existingPlayer.id !== socket.id) {
+        socket.emit("joinError", { message: "Name already taken in this room." });
+        return;
+      }
+      existingPlayer.id = socket.id; // Update socket ID if rejoining
     } else {
       room.players.push({ id: socket.id, name: playerName });
-    }
-
-    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
-    if (nameTaken) {
-      socket.emit("joinError", { message: "Name already taken in this room." });
-      return;
     }
 
     console.log(`🌐 ${playerName} (${socket.id}) joined ${upperCode}`);
@@ -481,23 +479,32 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
-    const initiator = getPlayer(socket.id, roomCode);
+    const initiator = getPlayer(socket.id, upperCode);
     if (initiator?.role !== "player") {
       console.log(`🚫 Spectator tried to start ranking phase`);
       return;
     }
 
+    // ✅ Check for at least 5 unique entries
+    const uniqueEntries = [...new Set(room.entries.map((e) => e.entry))];
+    if (uniqueEntries.length < 5) {
+      socket.emit("toastWarning", {
+        message: "Not enough unique entries yet. At least 5 needed.",
+      });
+      console.log(`🚫 Not enough unique entries in ${upperCode}:`, uniqueEntries.length);
+      return;
+    }
+
     room.phase = "ranking";
     room.phaseStartTime = Date.now();
-    io.to(upperCode).emit("phaseChange", { phase: room.phase });
-    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`);
     room.judgeName = judgeName;
+
+    io.to(upperCode).emit("phaseChange", { phase: room.phase });
+    io.to(upperCode).emit("startRankingPhase", { judgeName });
 
     const judgeSocket = room.players.find((p: Player) => p.name === judgeName)?.id || socket.id;
     const anonymousEntries = room.entries.map((e) => e.entry);
 
-    console.log(`🔔 Ranking phase started in ${upperCode} by judge ${judgeName}`);
-    io.to(upperCode).emit("startRankingPhase", { judgeName });
     io.to(judgeSocket).emit("sendAllEntries", { entries: anonymousEntries });
     io.to(judgeSocket).emit("roomState", {
       players: room.players,
@@ -506,6 +513,9 @@ io.on("connection", (socket) => {
       judgeName: room.judgeName,
       category: room.category,
     });
+
+    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${upperCode}`);
+    console.log(`🔔 Ranking phase started in ${upperCode} by judge ${judgeName}`);
   });
 
   socket.on("submitRanking", (payload: RankingPayload) => {
@@ -514,25 +524,18 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
-    const judge = getPlayer(socket.id, roomCode);
-    if (judge?.hasRanked) {
+    const judge = getPlayer(socket.id, upperCode);
+    if (!judge || judge.name !== room.judgeName) {
+      console.log(`🚫 Non-judge tried to submit ranking`);
+      return;
+    }
+
+    if (judge.hasRanked) {
       console.log(`🚫 Judge already submitted ranking. Ignoring.`);
       return;
     }
 
-    if (judge?.role !== "player") {
-      console.log(`🚫 Spectator tried to submit ranking`);
-      return;
-    }
-
-    room.phase = "ranking";
-    room.phaseStartTime = Date.now();
-    io.to(upperCode).emit("phaseChange", { phase: room.phase });
-    console.log(`[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${roomCode}`);
-    if (judge?.name === room.judgeName) {
-      judge.hasRanked = true;
-    }
-
+    judge.hasRanked = true;
     room.judgeRanking = ranking;
     room.selectedEntries = ranking;
 
@@ -661,10 +664,56 @@ io.on("connection", (socket) => {
     Object.entries(rooms).forEach(([code, room]) => {
       if (room.phase === "ranking" && room.phaseStartTime) {
         const timeout = 60000; // 1 minute
-        if (Date.now() - room.phaseStartTime > timeout) {
+        if (Date.now() - room.phaseStartTime > timeout && !room.judgeRanking) {
           console.log(
             `[${new Date().toISOString()}] ⏰ Timeout reached. Auto-advancing ${code} to reveal.`,
           );
+
+          // Fallback: shuffle entries if judge didn’t rank
+          const fallbackRanking = shuffleArray(room.entries.map((e) => e.entry));
+          room.judgeRanking = fallbackRanking;
+          room.selectedEntries = fallbackRanking;
+
+          room.phase = "reveal";
+          room.phaseStartTime = Date.now();
+          io.to(code).emit("phaseChange", { phase: room.phase });
+
+          const results: Record<string, PlayerResult> = {};
+          for (const [name, guess] of Object.entries(room.guesses)) {
+            let score = 0;
+            for (let i = 0; i < guess.length; i++) {
+              if (guess[i] === fallbackRanking[i]) score++;
+            }
+            if (score === fallbackRanking.length) score += 3;
+            results[name] = { guess, score };
+          }
+
+          io.to(code).emit("revealResults", { judgeRanking: fallbackRanking, results });
+
+          for (const [name, result] of Object.entries(results)) {
+            room.totalScores[name] = (room.totalScores[name] || 0) + result.score;
+          }
+
+          if (room.round < room.roundLimit) {
+            room.round++;
+            const judgeIndex = (room.round - 1) % room.players.length;
+            room.judgeName = room.players[judgeIndex]?.name ?? null;
+            room.entries = [];
+            room.guesses = {};
+            room.phase = "entry";
+            room.phaseStartTime = Date.now();
+
+            const nextCategory =
+              categories[Math.floor(Math.random() * categories.length)] ?? "Misc";
+            io.to(code).emit("phaseChange", { phase: room.phase });
+            io.to(code).emit("gameStarted", {
+              category: nextCategory,
+              round: room.round,
+            });
+          } else {
+            io.to(code).emit("finalScores", { scores: room.totalScores });
+            console.log(`🏁 Game ended in ${code}. Final scores:`, room.totalScores);
+          }
         }
       }
     });
