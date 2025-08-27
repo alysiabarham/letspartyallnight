@@ -122,8 +122,7 @@ function RoomPage() {
 
     socket.emit("joinGameRoom", {
       roomCode,
-      playerName: playerName.trim(),
-      role,
+      playerName: localStorage.getItem("playerName"),
     });
 
     return () => {

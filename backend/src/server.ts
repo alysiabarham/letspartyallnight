@@ -47,11 +47,11 @@ io.on("connection", (socket) => {
   socket.emit("playerList", { players: ["Alysia"] });
 });
 
-function createRoom(code: string, hostId: string): Room {
+function createRoom(code: string, hostId: string, hostName: string): Room {
   return {
     code,
     hostId,
-    players: [],
+    players: [{ id: hostId, name: hostName, role: "player" }],
     entries: [],
     guesses: {},
     judgeRanking: [],
@@ -82,9 +82,9 @@ if (require.main === module) {
   });
 }
 const rooms: Record<string, Room> = {};
-function getPlayer(socketId: string, roomCode: string) {
-  const room = rooms[roomCode.toUpperCase()];
-  return room?.players.find((p: Player) => p.id === socketId);
+function getPlayer(socketId: string, roomCode: string): Player | undefined {
+  const room = rooms[roomCode];
+  return room?.players.find((p) => p.id === socketId);
 }
 
 const categories = [
@@ -234,6 +234,7 @@ app.get("/health", (_req, res) => {
 
 app.post("/create-room", createRoomLimiter, (req, res) => {
   const { hostId } = req.body as { hostId: string };
+  const hostName = hostId;
 
   if (!hostId || !isAlphanumeric(hostId)) {
     return res.status(400).json({ error: "Host name must be alphanumeric." });
@@ -247,7 +248,7 @@ app.post("/create-room", createRoomLimiter, (req, res) => {
     roomCode = generateRoomCode().toUpperCase();
   }
 
-  const newRoom = createRoom(roomCode, hostId);
+  const newRoom = createRoom(roomCode, hostId, hostName);
   newRoom.players.push({ id: hostId, name: hostId });
   rooms[roomCode] = newRoom;
 
@@ -335,9 +336,9 @@ io.on("connection", (socket) => {
     }
 
     if (!rooms[upperCode]) {
-      const newRoom = createRoom(upperCode, socket.id);
+      const newRoom = createRoom(upperCode, socket.id, playerName);
       rooms[upperCode] = newRoom;
-      console.log(`🆕 Created new room: ${upperCode}`);
+      console.log(`🆕 Created new room: ${upperCode} by ${playerName}`);
     }
 
     const room = rooms[upperCode];
@@ -392,7 +393,10 @@ io.on("connection", (socket) => {
     room.judgeName = null;
     room.phaseStartTime = Date.now();
 
-    const host = getPlayer(socket.id, upperCode); // ✅ use upperCode here
+    console.log(`🧪 startGame called by ${socket.id} in room ${upperCode}`);
+    const host = getPlayer(socket.id, upperCode);
+    console.log(`🧪 Host resolved as:`, host);
+
     if (host?.role !== "player") {
       console.log(`🚫 Spectator tried to start the game`);
       return;
