@@ -82,9 +82,9 @@ if (require.main === module) {
   });
 }
 const rooms: Record<string, Room> = {};
-function getPlayer(socketId: string, roomCode: string): Player | undefined {
-  const room = rooms[roomCode];
-  return room?.players.find((p) => p.id === socketId);
+function getPlayer(socketId: string, roomCode: string) {
+  const room = rooms[roomCode.toUpperCase()];
+  return room?.players.find((p: Player) => p.id === socketId);
 }
 
 const categories = [
@@ -349,14 +349,18 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
-    if (nameTaken) {
-      socket.emit("joinError", { message: "Name already taken in this room." });
-      return;
-    }
+    const existingPlayer = room.players.find((p) => p.name === playerName);
 
-    const alreadyJoined = room.players.some((p) => p.id === socket.id);
-    if (!alreadyJoined) {
+    if (existingPlayer) {
+      if (existingPlayer.id !== socket.id) {
+        socket.emit("joinError", { message: "Name already taken in this room." });
+        return;
+      }
+
+      // Already joined — update socket ID just in case
+      existingPlayer.id = socket.id;
+    } else {
+      // New player — add to room
       room.players.push({ id: socket.id, name: playerName, role: "player" });
     }
 
