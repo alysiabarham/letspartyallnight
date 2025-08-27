@@ -43,6 +43,12 @@ function RoomPage() {
   localStorage.setItem("role", role);
 
   useEffect(() => {
+    window.addEventListener("beforeunload", () => {
+      localStorage.removeItem("alreadyJoined");
+    });
+  }, []);
+
+  useEffect(() => {
     const storedRole = localStorage.getItem("role");
     if (storedRole === "player" || storedRole === "spectator") {
       setRole(storedRole);
@@ -65,7 +71,10 @@ function RoomPage() {
     }
 
     const alreadyJoined = localStorage.getItem("alreadyJoined");
-    if (alreadyJoined === roomCode) return;
+    if (alreadyJoined === roomCode) {
+      console.log("🛑 Already joined this room. Skipping join.");
+      return;
+    }
 
     const handleJoinRoom = async () => {
       const safeName = playerName.trim().replace(/[^a-zA-Z0-9]/g, "");
@@ -87,6 +96,7 @@ function RoomPage() {
         );
 
         if (response.status === 200 || response.status === 201) {
+          localStorage.setItem("alreadyJoined", roomCode);
           toast({ title: "Room joined!", status: "success" });
           setPhase("waiting");
 
@@ -96,7 +106,6 @@ function RoomPage() {
           }
 
           socket.emit("joinGameRoom", { roomCode, playerName: safeName });
-          localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", playerName);
         } else {
           toast({ title: "Join failed", description: "Unexpected status code.", status: "error" });
