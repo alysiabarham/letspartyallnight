@@ -55,7 +55,7 @@ function RoomPage() {
     }
 
     socket.on("playerList", ({ players }) => {
-      setPlayers(players); // or whatever your state setter is
+      setPlayers(players); // or whatever your state setter is Salt said hi
     });
 
     return () => {

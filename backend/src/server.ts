@@ -390,7 +390,7 @@ io.on("connection", (socket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
-    // 🔄 Reset room state before starting
+    // 🔄 Reset room state before starting Salt said hi
     room.phase = "entry";
     room.round = 1;
     room.entries = [];
