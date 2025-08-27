@@ -349,10 +349,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const existingPlayer = room.players.find((p) => p.name === playerName);
-    if (existingPlayer) {
-      existingPlayer.id = socket.id; // Update socket ID if rejoining
-    } else {
+    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
+    if (nameTaken) {
+      socket.emit("joinError", { message: "Name already taken in this room." });
+      return;
+    }
+
+    const alreadyJoined = room.players.some((p) => p.id === socket.id);
+    if (!alreadyJoined) {
       room.players.push({ id: socket.id, name: playerName, role: "player" });
     }
 

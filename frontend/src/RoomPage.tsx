@@ -120,11 +120,6 @@ function RoomPage() {
 
     handleJoinRoom();
 
-    socket.emit("joinGameRoom", {
-      roomCode,
-      playerName: localStorage.getItem("playerName"),
-    });
-
     return () => {
       socket.off("playerJoined");
       socket.off("gameStarted");
