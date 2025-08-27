@@ -343,15 +343,17 @@ io.on("connection", (socket) => {
 
     const room = rooms[upperCode];
 
+    const duplicateName = room.players.some((p) => p.name === playerName && p.id !== socket.id);
+    if (duplicateName) {
+      socket.emit("joinError", { message: "Name already taken in this room." });
+      return;
+    }
+
     const existingPlayer = room.players.find((p) => p.name === playerName);
     if (existingPlayer) {
-      if (existingPlayer.id !== socket.id) {
-        socket.emit("joinError", { message: "Name already taken in this room." });
-        return;
-      }
       existingPlayer.id = socket.id; // Update socket ID if rejoining
     } else {
-      room.players.push({ id: socket.id, name: playerName });
+      room.players.push({ id: socket.id, name: playerName, role: "player" });
     }
 
     console.log(`🌐 ${playerName} (${socket.id}) joined ${upperCode}`);
@@ -724,10 +726,17 @@ io.on("connection", (socket) => {
   }, 10000);
 
   socket.on("disconnect", () => {
-    const room = Object.values(rooms).find((r) =>
-      r.players.some((p: Player) => p.id === socket.id),
-    );
-    const player = room?.players.find((p: Player) => p.id === socket.id);
-    console.log(`🔌 Disconnected: ${player?.name ?? socket.id}`);
+    for (const [code, room] of Object.entries(rooms)) {
+      const before = room.players.length;
+      room.players = room.players.filter((p) => p.id !== socket.id);
+      const after = room.players.length;
+
+      if (before !== after) {
+        console.log(`🔌 Disconnected: ${socket.id} removed from room ${code}`);
+        io.to(code).emit("playerList", {
+          players: room.players.map((p) => p.name),
+        });
+      }
+    }
   });
 });
