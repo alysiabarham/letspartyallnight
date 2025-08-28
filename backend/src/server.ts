@@ -409,7 +409,7 @@ io.on("connection", (socket: IOSocket) => {
     const room = rooms[upperCode];
     if (!room) return;
 
-    // 🔄 Reset room state before starting Salt said hi
+    // 🔄 Reset room state before starting
     room.phase = "entry";
     room.round = 1;
     room.entries = [];
