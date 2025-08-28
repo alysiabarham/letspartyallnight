@@ -82,17 +82,19 @@ function RoomPage() {
         toast({ title: "Name must be alphanumeric & under 20 chars.", status: "error" });
         return;
       }
+      if (!socket?.id || !safeName || !roomCode) {
+        console.warn("Missing required fields:", { socketId: socket?.id, safeName, roomCode });
+        return;
+      }
 
       try {
+        console.log("JOINING ROOM:", { roomCode, safeName, socketId: socket.id });
         const response = await axios.post(
           "https://letspartyallnight-backend.onrender.com/join-room",
           {
             roomCode,
             playerId: safeName,
             socketId: socket.id,
-          },
-          {
-            withCredentials: true,
           },
         );
 
