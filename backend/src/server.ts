@@ -11,6 +11,7 @@ import { ServerToClientEvents, ClientToServerEvents } from "./socketTypes";
 import type { ListenPayloads as _ListenPayloads } from "./types";
 import type { EmitPayloads } from "./types";
 import type { Player } from "./types";
+import { Socket as IOSocket } from "socket.io";
 
 const app: Application = express();
 const httpServer = createServer(app);
@@ -39,7 +40,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, SocketServerEv
   pingInterval: 25000,
 });
 
-io.on("connection", (socket) => {
+io.on("connection", (socket: IOSocket) => {
   socket.on("player:join", (_payload: EmitPayloads["player:join"]) => {
     // handle join
   });
@@ -249,8 +250,8 @@ app.post("/create-room", createRoomLimiter, (req, res) => {
   }
 
   const newRoom = createRoom(roomCode, hostId, hostName);
-  newRoom.players.push({ id: hostId, name: hostId });
   rooms[roomCode] = newRoom;
+  newRoom.players.push({ id: hostId, name: hostName, role: "player" });
 
   console.log(`Room created: ${roomCode} by ${hostId}`);
   res.status(201).json({
@@ -263,10 +264,18 @@ app.post("/create-room", createRoomLimiter, (req, res) => {
 });
 
 app.post("/join-room", apiLimiter, (req, res) => {
-  const { roomCode, playerId } = req.body as { roomCode?: string; playerId?: string };
+  const { roomCode, playerId, socketId } = req.body as {
+    roomCode?: string;
+    playerId?: string;
+    socketId?: string;
+  };
 
-  if (typeof roomCode !== "string" || typeof playerId !== "string") {
-    return res.status(400).json({ error: "Invalid roomCode or playerId." });
+  if (
+    typeof roomCode !== "string" ||
+    typeof playerId !== "string" ||
+    typeof socketId !== "string"
+  ) {
+    return res.status(400).json({ error: "Invalid roomCode, playerId, or socketId." });
   }
 
   const upperCode = roomCode.toUpperCase();
@@ -280,13 +289,19 @@ app.post("/join-room", apiLimiter, (req, res) => {
     return res.status(403).json({ error: "Room is full." });
   }
 
-  const existingPlayer = room.players.find((p: Player) => p.name === playerId);
-  if (existingPlayer) {
+  const nameTaken = room.players.some((p) => p.name === playerId && p.id !== socketId);
+  if (nameTaken) {
     return res.status(409).json({ error: "Name already taken in this room." });
   }
 
-  room.players.push({ id: playerId, name: playerId });
-  console.log(`Player ${playerId} joined room ${upperCode}`);
+  const existingPlayer = room.players.find((p) => p.name === playerId);
+  if (existingPlayer) {
+    existingPlayer.id = socketId;
+  } else {
+    room.players.push({ id: socketId, name: playerId, role: "player" });
+  }
+
+  console.log(`✅ ${playerId} joined room ${upperCode} with socket ${socketId}`);
 
   io.to(upperCode).emit("playerList", {
     players: room.players.map((p: Player) => p.name),
@@ -301,7 +316,7 @@ function shuffleArray(arr: string[]): string[] {
 }
 
 // --- Socket.IO Events ---
-io.on("connection", (socket) => {
+io.on("connection", (socket: IOSocket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
   socket.on(
     "setRole",

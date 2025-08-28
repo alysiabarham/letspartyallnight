@@ -89,6 +89,7 @@ function RoomPage() {
           {
             roomCode,
             playerId: safeName,
+            socketId: socket.id,
           },
           {
             withCredentials: true,
