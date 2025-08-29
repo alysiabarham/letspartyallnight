@@ -40,6 +40,27 @@ function RoomPage() {
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
 
+  useEffect(() => {
+  const handleJoinError = ({ message }: { message: string }) => {
+    console.warn("🚫 Join error:", message);
+    toast({
+      title: "Join failed",
+      description: message,
+      status: "error",
+    });
+
+    setGameStarted(false);
+    setPlayers([]);
+    localStorage.removeItem("alreadyJoined");
+  };
+
+  socket.on("joinError", handleJoinError);
+
+  return () => {
+    socket.off("joinError", handleJoinError);
+  };
+}, []);
+
   localStorage.setItem("role", role);
 
   useEffect(() => {
@@ -55,7 +76,7 @@ function RoomPage() {
     }
 
     socket.on("playerList", ({ players }) => {
-      setPlayers(players); // or whatever your state setter is Salt said hi
+      setPlayers(players); // or whatever your state setter is
     });
 
     return () => {
@@ -70,6 +91,17 @@ function RoomPage() {
       return;
     }
 
+    const safeName = playerName.trim().replace(/[^a-zA-Z0-9]/g, "");
+    if (!safeName || safeName.length > 20) {
+      toast({ title: "Name must be alphanumeric & under 20 chars.", status: "error" });
+      return;
+    }
+
+    if (!socket?.id) {
+      console.warn("🛑 Socket not ready yet.");
+      return;
+    }
+
     const alreadyJoined = localStorage.getItem("alreadyJoined");
     if (alreadyJoined === roomCode) {
       console.log("🛑 Already joined this room. Skipping join.");
@@ -77,18 +109,13 @@ function RoomPage() {
     }
 
     const handleJoinRoom = async () => {
-      const safeName = playerName.trim().replace(/[^a-zA-Z0-9]/g, "");
-      if (!safeName || safeName.length > 20) {
-        toast({ title: "Name must be alphanumeric & under 20 chars.", status: "error" });
-        return;
-      }
-      if (!socket?.id || !safeName || !roomCode) {
-        console.warn("Missing required fields:", { socketId: socket?.id, safeName, roomCode });
-        return;
-      }
+      console.log("📡 Sending join-room POST:", {
+        roomCode,
+        playerId: safeName,
+        socketId: socket.id,
+      });
 
       try {
-        console.log("JOINING ROOM:", { roomCode, safeName, socketId: socket.id });
         const response = await axios.post(
           "https://letspartyallnight-backend.onrender.com/join-room",
           {
@@ -99,27 +126,26 @@ function RoomPage() {
         );
 
         if (response.status === 200 || response.status === 201) {
+          console.log("✅ Join-room POST succeeded");
           localStorage.setItem("alreadyJoined", roomCode);
-          toast({ title: "Room joined!", status: "success" });
+          localStorage.setItem("playerName", safeName);
           setPhase("waiting");
 
-          if (!socket.connected) {
-            toast({ title: "Socket not ready yet.", status: "error" });
-            return;
-          }
-
           socket.emit("joinGameRoom", { roomCode, playerName: safeName });
-          localStorage.setItem("playerName", playerName);
+          toast({ title: "Room joined!", status: "success" });
         } else {
           toast({ title: "Join failed", description: "Unexpected status code.", status: "error" });
         }
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           const axiosError = error as AxiosError;
-          if (axiosError.response?.status === 409) {
-          } else {
-            toast({ title: "Join failed", description: axiosError.message, status: "error" });
-          }
+          const message =
+            typeof axiosError.response?.data === "object" &&
+            axiosError.response?.data !== null &&
+            "error" in axiosError.response.data
+              ? (axiosError.response.data as { error: string }).error
+              : axiosError.message;
+          toast({ title: "Join failed", description: message, status: "error" });
         } else {
           toast({
             title: "Join failed",
