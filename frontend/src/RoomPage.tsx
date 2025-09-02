@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   HStack,
@@ -40,10 +40,10 @@ function RoomPage() {
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
 
-  let joinSucceeded = false;
+  const joinSucceededRef = useRef(false);
 
   const handleJoinError = ({ message }: { message: string }) => {
-    if (joinSucceeded) {
+    if (joinSucceededRef.current) {
       console.warn("⚠️ Ignoring stale joinError after successful join.");
       return;
     }
@@ -125,7 +125,7 @@ function RoomPage() {
         );
 
         if (response.status === 200 || response.status === 201) {
-          joinSucceeded = true;
+          joinSucceededRef.current = true;
           console.log("✅ Join-room POST succeeded");
           localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", safeName);
