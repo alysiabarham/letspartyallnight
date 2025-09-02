@@ -283,21 +283,20 @@ app.post("/join-room", apiLimiter, (req, res) => {
   if (!room) {
     return res.status(404).json({ error: "Room not found." });
   }
-
-  if (room.players.length >= room.maxPlayers) {
-    return res.status(403).json({ error: "Room is full." });
-  }
-
-  const nameTaken = room.players.some((p) => p.name === playerId && p.id !== socketId);
-  if (nameTaken) {
-    return res.status(409).json({ error: "Name already taken in this room." });
-  }
+  console.log("🧪 Current players in room:", room.players);
 
   const existingPlayer = room.players.find((p) => p.name === playerId);
+
   if (existingPlayer) {
-    existingPlayer.id = socketId;
+    if (existingPlayer.id !== socketId) {
+      existingPlayer.id = socketId; // Update socket ID if rejoining
+      console.log(`🔁 ${playerId} rejoined with new socket ${socketId}`);
+    } else {
+      console.log(`🔁 ${playerId} already joined with socket ${socketId}`);
+    }
   } else {
     room.players.push({ id: socketId, name: playerId, role: "player" });
+    console.log(`✅ ${playerId} added to room ${roomCode}`);
   }
 
   console.log(`✅ ${playerId} joined room ${upperCode} with socket ${socketId}`);
