@@ -40,26 +40,25 @@ function RoomPage() {
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
 
-  useEffect(() => {
-    const handleJoinError = ({ message }: { message: string }) => {
-      console.warn("🚫 Join error:", message);
-      toast({
-        title: "Join failed",
-        description: message,
-        status: "error",
-      });
+  let joinSucceeded = false;
 
-      setGameStarted(false);
-      setPlayers([]);
-      localStorage.removeItem("alreadyJoined");
-    };
+  const handleJoinError = ({ message }: { message: string }) => {
+    if (joinSucceeded) {
+      console.warn("⚠️ Ignoring stale joinError after successful join.");
+      return;
+    }
 
-    socket.on("joinError", handleJoinError);
+    console.warn("🚫 Join error:", message);
+    toast({
+      title: "Join failed",
+      description: message,
+      status: "error",
+    });
 
-    return () => {
-      socket.off("joinError", handleJoinError);
-    };
-  }, []);
+    setGameStarted(false);
+    setPlayers([]);
+    localStorage.removeItem("alreadyJoined");
+  };
 
   localStorage.setItem("role", role);
 
@@ -126,6 +125,7 @@ function RoomPage() {
         );
 
         if (response.status === 200 || response.status === 201) {
+          joinSucceeded = true;
           console.log("✅ Join-room POST succeeded");
           localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", safeName);
