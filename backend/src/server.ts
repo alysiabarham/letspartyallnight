@@ -251,7 +251,6 @@ app.post("/create-room", createRoomLimiter, (req, res) => {
 
   const newRoom = createRoom(roomCode, hostId, hostName);
   rooms[roomCode] = newRoom;
-  newRoom.players.push({ id: hostId, name: hostName, role: "player" });
 
   console.log(`Room created: ${roomCode} by ${hostId}`);
   res.status(201).json({
