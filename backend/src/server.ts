@@ -42,7 +42,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, SocketServerEv
 
 io.on("connection", (socket: IOSocket) => {
   socket.on("player:join", (_payload: EmitPayloads["player:join"]) => {
-    // handle join hi Salt
+    // handle join
   });
 
   socket.emit("playerList", { players: ["Alysia"] });

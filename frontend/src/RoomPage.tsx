@@ -41,25 +41,25 @@ function RoomPage() {
   const [role, setRole] = useState<"player" | "spectator">("player");
 
   useEffect(() => {
-  const handleJoinError = ({ message }: { message: string }) => {
-    console.warn("🚫 Join error:", message);
-    toast({
-      title: "Join failed",
-      description: message,
-      status: "error",
-    });
+    const handleJoinError = ({ message }: { message: string }) => {
+      console.warn("🚫 Join error:", message);
+      toast({
+        title: "Join failed",
+        description: message,
+        status: "error",
+      });
 
-    setGameStarted(false);
-    setPlayers([]);
-    localStorage.removeItem("alreadyJoined");
-  };
+      setGameStarted(false);
+      setPlayers([]);
+      localStorage.removeItem("alreadyJoined");
+    };
 
-  socket.on("joinError", handleJoinError);
+    socket.on("joinError", handleJoinError);
 
-  return () => {
-    socket.off("joinError", handleJoinError);
-  };
-}, []);
+    return () => {
+      socket.off("joinError", handleJoinError);
+    };
+  }, []);
 
   localStorage.setItem("role", role);
 
