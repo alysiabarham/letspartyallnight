@@ -59,7 +59,23 @@ function LandingPageContent() {
         isClosable: true,
       });
 
-      socket.emit("joinGameRoom", { roomCode, playerName: hostId });
+      try {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomCode, playerName: hostId }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to join room");
+        }
+
+        console.log("✅ Host joined room via POST");
+      } catch (err) {
+        console.error("❌ Error joining room:", err);
+        // Optionally show a toast or UI feedback here
+      }
+
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
       console.error("Create error:", error.response?.data || error.message);
