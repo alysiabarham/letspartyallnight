@@ -229,7 +229,7 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.post("/create-room", createRoomLimiter, (req, res) => {
+app.post("/create-room", createRoomLimiter, async (req, res) => {
   const { hostId } = req.body as { hostId: string };
   const hostName = hostId;
 
@@ -248,6 +248,14 @@ app.post("/create-room", createRoomLimiter, (req, res) => {
   rooms[roomCode] = newRoom;
 
   console.log(`Room created: ${roomCode} by ${hostId}`);
+  // Add host to room explicitly
+  await io.to(newRoom.hostId).emit("playerJoined", {
+    success: true,
+    roomCode,
+    playerName: hostName,
+    players: newRoom.players,
+    message: `${hostName} has created and joined the room.`,
+  });
   return res.status(201).json({
     message: "Room created successfully!",
     roomCode,

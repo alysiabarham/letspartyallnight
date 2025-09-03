@@ -71,6 +71,10 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
+      // Set localStorage to mark as joined *before* emitting joinGameRoom
+      localStorage.setItem("alreadyJoined", roomCode);
+      localStorage.setItem("playerName", hostId);
+
       // Wait for playerJoined confirmation before navigating
       const joinPromise = new Promise((resolve, reject) => {
         socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
@@ -90,6 +94,7 @@ function LandingPageContent() {
       await joinPromise;
 
       toast({
+        id: `create-room-${roomCode}`,
         title: "Room created and joined!",
         description: `Code: ${roomCode}`,
         status: "success",
@@ -97,9 +102,11 @@ function LandingPageContent() {
         isClosable: true,
       });
 
-      navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
+      navigate(`/room/${roomCode}`, { state: { playerName: hostId, isHost: true } });
     } catch (error: any) {
       console.error("Create/Join error:", error.response?.data || error.message);
+      localStorage.removeItem("alreadyJoined");
+      localStorage.removeItem("playerName");
       toast({
         title: "Error creating room.",
         description: error.response?.data?.error || error.message || "Try again later.",
@@ -159,7 +166,11 @@ function LandingPageContent() {
 
       await joinPromise;
 
+      localStorage.setItem("alreadyJoined", room.code);
+      localStorage.setItem("playerName", playerId);
+
       toast({
+        id: `join-room-${room.code}`,
         title: "Room joined!",
         description: `Joined: ${room.code}`,
         status: "success",
@@ -167,7 +178,7 @@ function LandingPageContent() {
         isClosable: true,
       });
 
-      navigate(`/room/${room.code}`, { state: { playerName: playerId } });
+      navigate(`/room/${room.code}`, { state: { playerName: playerId, isHost: false } });
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({

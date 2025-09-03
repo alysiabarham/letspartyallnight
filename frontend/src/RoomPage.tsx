@@ -22,6 +22,7 @@ function RoomPage() {
   const toast = useToast();
 
   const playerName = location.state?.playerName || "Guest";
+  const isHost = location.state?.isHost || false;
   const [players, setPlayers] = useState<string[]>([]);
   const [entries, setEntries] = useState<string[]>([]);
   const [entryText, setEntryText] = useState("");
@@ -66,8 +67,9 @@ function RoomPage() {
     }
 
     const alreadyJoined = localStorage.getItem("alreadyJoined");
-    if (alreadyJoined === roomCode) {
-      console.log("🛑 Already joined this room. Skipping join.");
+    if (alreadyJoined === roomCode || isHost) {
+      console.log("🛑 Already joined or host. Skipping join.");
+      joinSucceededRef.current = true; // Mark as joined to prevent error navigation
       return;
     }
 
@@ -101,7 +103,7 @@ function RoomPage() {
 
       socket.once("joinError", ({ message }) => {
         if (joinSucceededRef.current) {
-          console.warn("⚠️ Ignoring stale joinError after successful join.");
+          console.warn("⚠️ Ignoring stale joinError after successful join:", message);
           return;
         }
         console.warn("🚫 Join error:", message);
@@ -114,6 +116,7 @@ function RoomPage() {
         setGameStarted(false);
         setPlayers([]);
         localStorage.removeItem("alreadyJoined");
+        localStorage.removeItem("playerName");
         navigate("/");
       });
     };
@@ -124,7 +127,7 @@ function RoomPage() {
       socket.off("playerJoined");
       socket.off("joinError");
     };
-  }, [roomCode, playerName, toast, navigate]);
+  }, [roomCode, playerName, toast, navigate, isHost]);
 
   useEffect(() => {
     socket.on("playerList", ({ players }) => {
@@ -182,12 +185,6 @@ function RoomPage() {
       );
       if (me?.role) {
         setRole(me.role);
-        toast({
-          title: `You're a ${me.role}`,
-          status: me.role === "player" ? "success" : "info",
-          duration: 3000,
-          isClosable: true,
-        });
       }
     });
 
@@ -334,7 +331,6 @@ function RoomPage() {
   };
 
   const isJudge = playerName === judge;
-  const isHost = playerName === host;
   const isSpectator = role === "spectator";
 
   return (
