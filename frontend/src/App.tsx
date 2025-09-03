@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect } from "react";
 import { useToast } from "@chakra-ui/react";
 import { Routes, Route, Navigate, HashRouter as Router, useNavigate } from "react-router-dom";
@@ -10,11 +9,11 @@ import { socket } from "./socket";
 // Pages
 import Home from "./pages/Home";
 import RoomPage from "./RoomPage";
-import EnterRoom from "./pages/EnterRoom"; // ✅ Added
+import EnterRoom from "./pages/EnterRoom";
 import JudgeRankingPage from "./JudgeRankingPage";
 import GuesserRankingPage from "./GuesserRankingPage";
 import ResultsPage from "./ResultsPage";
-import FinalResultsPage from "./FinalResultsPage"; // ✅ New
+import FinalResultsPage from "./FinalResultsPage";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("Backend URL:", backendUrl);
@@ -23,7 +22,18 @@ function LandingPageContent() {
   const toast = useToast();
   const [roomCodeInput, setRoomCodeInput] = React.useState("");
   const [playerNameInput, setPlayerNameInput] = React.useState("");
+  const [isSocketConnected, setIsSocketConnected] = React.useState(socket.connected);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      setIsSocketConnected(true);
+      console.log("✅ Socket connected:", socket.id);
+    });
+    return () => {
+      socket.off("connect");
+    };
+  }, []);
 
   const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPlayerNameInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
@@ -44,6 +54,16 @@ function LandingPageContent() {
       return;
     }
 
+    if (!isSocketConnected) {
+      toast({
+        title: "Connecting to server...",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     try {
       const hostId = playerNameInput.trim();
       const response = await axios.post(`${backendUrl}/create-room`, {
@@ -51,37 +71,38 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
+      // Wait for playerJoined confirmation before navigating
+      const joinPromise = new Promise((resolve, reject) => {
+        socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
+          if (success && joinedCode === roomCode && playerName === hostId) {
+            resolve(true);
+          } else {
+            reject(new Error("Failed to confirm join"));
+          }
+        });
+        socket.once("joinError", ({ message }) => {
+          reject(new Error(message));
+        });
+      });
+
+      socket.emit("joinGameRoom", { roomCode, playerName: hostId });
+
+      await joinPromise;
+
       toast({
-        title: "Room created!",
+        title: "Room created and joined!",
         description: `Code: ${roomCode}`,
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/join`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomCode, playerName: hostId }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join room");
-        }
-
-        console.log("✅ Host joined room via POST");
-      } catch (err) {
-        console.error("❌ Error joining room:", err);
-        // Optionally show a toast or UI feedback here
-      }
-
       navigate(`/room/${roomCode}`, { state: { playerName: hostId } });
     } catch (error: any) {
-      console.error("Create error:", error.response?.data || error.message);
+      console.error("Create/Join error:", error.response?.data || error.message);
       toast({
         title: "Error creating room.",
-        description: error.response?.data?.error || "Try again later.",
+        description: error.response?.data?.error || error.message || "Try again later.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -100,14 +121,43 @@ function LandingPageContent() {
       return;
     }
 
+    if (!isSocketConnected) {
+      toast({
+        title: "Connecting to server...",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     try {
       const playerId = playerNameInput.trim();
       const response = await axios.post(`${backendUrl}/join-room`, {
         roomCode: roomCodeInput,
         playerId,
+        socketId: socket.id,
       });
 
       const { room } = response.data;
+
+      // Wait for playerJoined confirmation
+      const joinPromise = new Promise((resolve, reject) => {
+        socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
+          if (success && joinedCode === room.code && playerName === playerId) {
+            resolve(true);
+          } else {
+            reject(new Error("Failed to confirm join"));
+          }
+        });
+        socket.once("joinError", ({ message }) => {
+          reject(new Error(message));
+        });
+      });
+
+      socket.emit("joinGameRoom", { roomCode: room.code, playerName: playerId });
+
+      await joinPromise;
 
       toast({
         title: "Room joined!",
@@ -117,17 +167,12 @@ function LandingPageContent() {
         isClosable: true,
       });
 
-      socket.emit("joinGameRoom", {
-        roomCode: room.code,
-        playerName: playerId,
-      });
-
       navigate(`/room/${room.code}`, { state: { playerName: playerId } });
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({
         title: "Join failed.",
-        description: error.response?.data?.error || "Room not found or full.",
+        description: error.response?.data?.error || error.message || "Room not found or full.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -179,6 +224,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleCreateRoom}
         w="200px"
+        isDisabled={!isSocketConnected}
       >
         CREATE NEW ROOM
       </Button>
@@ -211,6 +257,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleJoinRoom}
         w="200px"
+        isDisabled={!isSocketConnected}
       >
         JOIN ROOM
       </Button>

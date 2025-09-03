@@ -12,12 +12,8 @@ import {
   ListItem,
   useToast,
 } from "@chakra-ui/react";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { socket } from "./socket";
-
-socket.on("connect", () => {
-  console.log("✅ Socket connected:", socket.id);
-});
 
 function RoomPage() {
   const { roomCode } = useParams();
@@ -26,7 +22,6 @@ function RoomPage() {
   const toast = useToast();
 
   const playerName = location.state?.playerName || "Guest";
-
   const [players, setPlayers] = useState<string[]>([]);
   const [entries, setEntries] = useState<string[]>([]);
   const [entryText, setEntryText] = useState("");
@@ -36,68 +31,37 @@ function RoomPage() {
   const [judge, setJudge] = useState("");
   const [round, setRound] = useState(1);
   const [gameStarted, setGameStarted] = useState(false);
-  const [phase, setPhase] = useState<"waiting" | "entry" | "ranking">("waiting");
+  const [phase, setPhase] = useState<"lobby" | "entry" | "ranking" | "reveal">("lobby");
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
 
   const joinSucceededRef = useRef(false);
 
-  const handleJoinError = ({ message }: { message: string }) => {
-    if (joinSucceededRef.current) {
-      console.warn("⚠️ Ignoring stale joinError after successful join.");
-      return;
-    }
-
-    console.warn("🚫 Join error:", message);
-    toast({
-      title: "Join failed",
-      description: message,
-      status: "error",
-    });
-
-    setGameStarted(false);
-    setPlayers([]);
-    localStorage.removeItem("alreadyJoined");
-  };
-
-  localStorage.setItem("role", role);
-
   useEffect(() => {
-    window.addEventListener("beforeunload", () => {
-      localStorage.removeItem("alreadyJoined");
-    });
-  }, []);
-
-  useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    if (storedRole === "player" || storedRole === "spectator") {
-      setRole(storedRole);
-    }
-
-    socket.on("playerList", ({ players }) => {
-      setPlayers(players); // or whatever your state setter is
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket.id);
     });
 
     return () => {
-      socket.off("playerList");
+      socket.off("connect");
     };
   }, []);
 
   useEffect(() => {
     if (!roomCode) {
-      toast({ title: "Missing room code.", status: "error" });
+      toast({ title: "Missing room code.", status: "error", duration: 3000 });
       navigate("/");
       return;
     }
 
     const safeName = playerName.trim().replace(/[^a-zA-Z0-9]/g, "");
     if (!safeName || safeName.length > 20) {
-      toast({ title: "Name must be alphanumeric & under 20 chars.", status: "error" });
-      return;
-    }
-
-    if (!socket?.id) {
-      console.warn("🛑 Socket not ready yet.");
+      toast({
+        title: "Name must be alphanumeric & under 20 chars.",
+        status: "error",
+        duration: 3000,
+      });
+      navigate("/");
       return;
     }
 
@@ -108,80 +72,70 @@ function RoomPage() {
     }
 
     const handleJoinRoom = async () => {
-      console.log("📡 Sending join-room POST:", {
+      if (!socket.connected) {
+        console.warn("🛑 Socket not connected yet.");
+        toast({
+          title: "Connecting to server...",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      console.log("📡 Sending joinGameRoom:", {
         roomCode,
-        playerId: safeName,
-        socketId: socket.id,
+        playerName: safeName,
       });
 
-      try {
-        const response = await axios.post(
-          "https://letspartyallnight-backend.onrender.com/join-room",
-          {
-            roomCode,
-            playerId: safeName,
-            socketId: socket.id,
-          },
-        );
+      socket.emit("joinGameRoom", { roomCode, playerName: safeName });
 
-        if (response.status === 200 || response.status === 201) {
+      socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName: joinedName }) => {
+        if (success && joinedCode === roomCode && joinedName === safeName) {
           joinSucceededRef.current = true;
-          console.log("✅ Join-room POST succeeded");
           localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", safeName);
-          setPhase("waiting");
+          setPhase("lobby");
+        }
+      });
 
-          socket.emit("joinGameRoom", { roomCode, playerName: safeName });
-          toast({ title: "Room joined!", status: "success" });
-        } else {
-          toast({ title: "Join failed", description: "Unexpected status code.", status: "error" });
+      socket.once("joinError", ({ message }) => {
+        if (joinSucceededRef.current) {
+          console.warn("⚠️ Ignoring stale joinError after successful join.");
+          return;
         }
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          const axiosError = error as AxiosError;
-          const message =
-            typeof axiosError.response?.data === "object" &&
-            axiosError.response?.data !== null &&
-            "error" in axiosError.response.data
-              ? (axiosError.response.data as { error: string }).error
-              : axiosError.message;
-          toast({ title: "Join failed", description: message, status: "error" });
-        } else {
-          toast({
-            title: "Join failed",
-            description: "An unknown error occurred.",
-            status: "error",
-          });
-        }
-      }
+        console.warn("🚫 Join error:", message);
+        toast({
+          title: "Join failed",
+          description: message,
+          status: "error",
+          duration: 3000,
+        });
+        setGameStarted(false);
+        setPlayers([]);
+        localStorage.removeItem("alreadyJoined");
+        navigate("/");
+      });
     };
 
     handleJoinRoom();
 
     return () => {
       socket.off("playerJoined");
-      socket.off("gameStarted");
-      socket.off("newEntry");
-      socket.off("startRankingPhase");
+      socket.off("joinError");
     };
   }, [roomCode, playerName, toast, navigate]);
 
   useEffect(() => {
-    if (players.length > 0 && !host) {
-      setHost(players[0]);
-    }
-  }, [players, host]);
+    socket.on("playerList", ({ players }) => {
+      setPlayers(players);
+      if (players.length > 0 && !host) {
+        setHost(players[0]);
+      }
+    });
 
-  useEffect(() => {
-    socket.on(
-      "playerJoined",
-      ({ players: playerList }: { players: { id: string; name: string }[] }) => {
-        setPlayers(playerList.map((p) => p.name));
-      },
-    );
-
-    socket.on("roomPlayers", ({ playerList }: { playerList: string[] }) => {
-      setPlayers(playerList);
+    socket.on("playerJoined", ({ players: playerList }) => {
+      setPlayers(playerList.map((p: { id: string; name: string }) => p.name));
     });
 
     socket.on("gameStarted", ({ category, round }) => {
@@ -191,8 +145,6 @@ function RoomPage() {
       setCategory(category);
       setDoneSubmitting(false);
       setPhase("entry");
-      navigate(`/room/${roomCode}`, { state: { playerName } });
-      console.log("Navigating to /entry:", roomCode);
       toast({
         title: "Game Started!",
         status: "info",
@@ -202,18 +154,13 @@ function RoomPage() {
     });
 
     socket.on("newEntry", ({ entry }) => {
-      socket.on("startRankingPhase", ({ judgeName }) => {
-        if (playerName === judgeName) {
-          navigate(`/judge/${roomCode}`, { state: { playerName } });
-        } else {
-          navigate(`/guess/${roomCode}`, { state: { playerName } });
-        }
-      });
       setEntries((prev) => [...prev, entry]);
     });
 
     socket.on("startRankingPhase", ({ judgeName }) => {
       console.log("🔔 Received startRankingPhase. Judge is:", judgeName, "I am:", playerName);
+      setJudge(judgeName);
+      setPhase("ranking");
       if (playerName === judgeName) {
         console.log("✅ I am the Judge. Navigating to /judge");
         navigate(`/judge/${roomCode}`, { state: { playerName } });
@@ -223,67 +170,61 @@ function RoomPage() {
       }
     });
 
-    socket.on("roomState", ({ players, phase, round, judgeName, category }) => {
+    socket.on("roomState", ({ players, phase, round, judgeName, category, state }) => {
+      setPlayers(players.map((p: { name: string }) => p.name));
+      setPhase(phase);
+      setRound(round);
+      setJudge(judgeName || "");
+      setCategory(category || "");
+      console.log("🩺 Resyncing from roomState:", { phase, judgeName, state });
       const me = (players as { name: string; role?: "player" | "spectator" }[]).find(
         (p) => p.name === playerName,
       );
-      if (!toast.isActive("room-joined")) {
-        toast({
-          id: "room-joined",
-          title: "Room joined!",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
       if (me?.role) {
         setRole(me.role);
         toast({
           title: `You're a ${me.role}`,
           status: me.role === "player" ? "success" : "info",
+          duration: 3000,
+          isClosable: true,
         });
-      }
-      setCategory(category);
-      console.log("🩺 Resyncing from roomState:", { phase, judgeName });
-      if (phase === "ranking") {
-        if (playerName === judgeName) {
-          navigate(`/judge/${roomCode}`, { state: { playerName } });
-        } else {
-          navigate(`/guess/${roomCode}`, { state: { playerName } });
-        }
       }
     });
 
     socket.on("phaseChange", ({ phase }) => {
-      socket.on("toastWarning", ({ message }) => {
-        toast({
-          title: "Cannot advance yet",
-          description: message,
-          status: "warning",
-          duration: 4000,
-          isClosable: true,
-        });
-      });
       setPhase(phase);
-      if (phase === "entry") {
-        navigate(`/entry/${roomCode}`, { state: { playerName } });
-      } else if (phase === "ranking") {
-        navigate(`/judge/${roomCode}`, { state: { playerName } });
+      if (phase === "ranking") {
+        if (playerName === judge) {
+          navigate(`/judge/${roomCode}`, { state: { playerName } });
+        } else {
+          navigate(`/guess/${roomCode}`, { state: { playerName } });
+        }
       } else if (phase === "reveal") {
-        navigate(`/reveal/${roomCode}`, { state: { playerName } });
+        navigate(`/results/${roomCode}`, { state: { playerName } });
       }
     });
 
+    socket.on("toastWarning", ({ message }) => {
+      toast({
+        title: "Cannot advance yet",
+        description: message,
+        status: "warning",
+        duration: 4000,
+        isClosable: true,
+      });
+    });
+
     return () => {
+      socket.off("playerList");
       socket.off("playerJoined");
-      socket.off("roomPlayers");
       socket.off("gameStarted");
       socket.off("newEntry");
       socket.off("startRankingPhase");
       socket.off("roomState");
+      socket.off("phaseChange");
       socket.off("toastWarning");
     };
-  }, [playerName, navigate, roomCode, toast]);
+  }, [playerName, navigate, roomCode, toast, judge]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -304,15 +245,9 @@ function RoomPage() {
     return () => clearTimeout(timeout);
   }, [phase, judge, playerName, entries]);
 
-  useEffect(() => {
-    if (players.length > 0 && gameStarted) {
-      const newJudgeIndex = (round - 1) % players.length;
-      setJudge(players[newJudgeIndex]);
-    }
-  }, [players, round, gameStarted]);
-
   const handleStartGame = () => {
-    socket.emit("startGame", { roomCode });
+    socket.emit("startGame", { roomCode, roundLimit });
+    setGameStarted(true);
     toast({ title: "Game started!", status: "success", duration: 3000, isClosable: true });
   };
 
@@ -327,7 +262,7 @@ function RoomPage() {
       return;
     }
 
-    const trimmed = entryText.trim();
+    const trimmed = text.trim();
     const cleaned = trimmed.toLowerCase();
     const isAlphanumeric = /^[a-zA-Z0-9 ]+$/.test(cleaned);
     if (!isAlphanumeric) {
@@ -383,7 +318,7 @@ function RoomPage() {
         duration: 4000,
         isClosable: true,
       });
-      return; // prevent marking as done
+      return;
     }
     setDoneSubmitting(true);
     toast({
@@ -397,10 +332,6 @@ function RoomPage() {
   const handleAdvanceToRankingPhase = () => {
     socket.emit("startRankingPhase", { roomCode, judgeName: judge });
   };
-
-  useEffect(() => {
-    console.log(`🔁 Frontend advanced to round ${round}`);
-  }, [round]);
 
   const isJudge = playerName === judge;
   const isHost = playerName === host;
@@ -449,7 +380,7 @@ function RoomPage() {
         Role: {role === "player" ? "🎮 Player" : "👀 Spectator"}
       </Text>
 
-      {!gameStarted && isHost && (
+      {phase === "lobby" && isHost && (
         <>
           <Box>
             <Text fontSize="md" mt={4} color="#FFFF00">
@@ -470,16 +401,14 @@ function RoomPage() {
             />
           </Box>
           <Button
-            onClick={() => {
-              handleStartGame();
-              setGameStarted(true);
-            }}
+            onClick={handleStartGame}
             size="lg"
             bg="transparent"
             color="#00FF00"
             border="2px solid #00FF00"
             boxShadow="0 0 15px #00FF00"
             _hover={{ bg: "rgba(0,255,0,0.1)", boxShadow: "0 0 20px #00FF00" }}
+            isDisabled={players.length < 2}
           >
             START GAME
           </Button>

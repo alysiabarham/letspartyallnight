@@ -1,4 +1,4 @@
-import { RankingPayload, SubmitGuessPayload, Room, PlayerResult, Player, Phase } from "./types";
+import { RankingPayload, SubmitGuessPayload, PlayerResult, Player, Phase } from "./types";
 
 export type ClientToServerEvents = {
   "player:join": (data: { name: string; roomId: string }) => void;
@@ -21,13 +21,20 @@ export type ServerToClientEvents = {
   joinError: (payload: { message: string }) => void;
   playerJoinError: (msg: string) => void;
   phaseChange: (data: { phase: Phase }) => void;
-  playerJoined: (payload: { playerName: string; players: Player[]; message: string }) => void;
+  playerJoined: (payload: {
+    success: boolean;
+    roomCode: string;
+    playerName: string;
+    players?: Player[];
+    message?: string;
+  }) => void;
   roomState: (payload: {
-    players: Room["players"];
-    phase: Room["phase"];
-    round: Room["round"];
-    judgeName: Room["judgeName"];
-    category: Room["category"];
+    players: Player[];
+    phase: "lobby" | "entry" | "ranking" | "reveal";
+    round: number;
+    judgeName: string | null;
+    category: string | null;
+    state: string;
   }) => void;
   playerList: (data: { players: string[] }) => void;
   newEntry: (payload: { entry: string }) => void;

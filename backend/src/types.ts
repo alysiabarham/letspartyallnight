@@ -61,7 +61,7 @@ export type Room = {
   totalScores: Record<string, number>;
   round: number;
   roundLimit: number;
-  phase: "entry" | "ranking" | "reveal";
+  phase: "lobby" | "entry" | "ranking" | "reveal";
   phaseStartTime?: number;
   judgeName: string | null;
   category: string | null;
