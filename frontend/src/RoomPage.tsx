@@ -35,10 +35,10 @@ function RoomPage() {
   const [phase, setPhase] = useState<"lobby" | "entry" | "ranking" | "reveal">("lobby");
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
-
-  const joinSucceededRef = useRef(false);
+  const isInRoomRef = useRef(false);
 
   useEffect(() => {
+    console.log("📍 RoomPage mounted:", { roomCode, playerName, isHost });
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
     });
@@ -50,6 +50,7 @@ function RoomPage() {
 
   useEffect(() => {
     if (!roomCode) {
+      console.warn("🚫 Missing room code");
       toast({ title: "Missing room code.", status: "error", duration: 3000 });
       navigate("/");
       return;
@@ -57,6 +58,7 @@ function RoomPage() {
 
     const safeName = playerName.trim().replace(/[^a-zA-Z0-9]/g, "");
     if (!safeName || safeName.length > 20) {
+      console.warn("🚫 Invalid player name:", safeName);
       toast({
         title: "Name must be alphanumeric & under 20 chars.",
         status: "error",
@@ -67,9 +69,17 @@ function RoomPage() {
     }
 
     const alreadyJoined = localStorage.getItem("alreadyJoined");
-    if (alreadyJoined === roomCode || isHost) {
-      console.log("🛑 Already joined or host. Skipping join.");
-      joinSucceededRef.current = true; // Mark as joined to prevent error navigation
+    const storedPlayerName = localStorage.getItem("playerName");
+
+    if (isHost || (alreadyJoined === roomCode && storedPlayerName === safeName)) {
+      console.log("🛑 Host or already joined. Skipping join attempt:", {
+        isHost,
+        alreadyJoined,
+        storedPlayerName,
+        safeName,
+      });
+      isInRoomRef.current = true;
+      socket.emit("setRole", { roomCode, playerName: safeName, role: "player" });
       return;
     }
 
@@ -93,31 +103,26 @@ function RoomPage() {
       socket.emit("joinGameRoom", { roomCode, playerName: safeName });
 
       socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName: joinedName }) => {
+        console.log("📡 Received playerJoined:", {
+          success,
+          roomCode: joinedCode,
+          playerName: joinedName,
+        });
         if (success && joinedCode === roomCode && joinedName === safeName) {
-          joinSucceededRef.current = true;
+          isInRoomRef.current = true;
           localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", safeName);
-          setPhase("lobby");
+          if (!toast.isActive(`join-room-${roomCode}`)) {
+            toast({
+              id: `join-room-${roomCode}`,
+              title: "Room joined!",
+              description: `Joined: ${roomCode}`,
+              status: "success",
+              duration: 3000,
+              isClosable: true,
+            });
+          }
         }
-      });
-
-      socket.once("joinError", ({ message }) => {
-        if (joinSucceededRef.current) {
-          console.warn("⚠️ Ignoring stale joinError after successful join:", message);
-          return;
-        }
-        console.warn("🚫 Join error:", message);
-        toast({
-          title: "Join failed",
-          description: message,
-          status: "error",
-          duration: 3000,
-        });
-        setGameStarted(false);
-        setPlayers([]);
-        localStorage.removeItem("alreadyJoined");
-        localStorage.removeItem("playerName");
-        navigate("/");
       });
     };
 
@@ -125,11 +130,29 @@ function RoomPage() {
 
     return () => {
       socket.off("playerJoined");
-      socket.off("joinError");
     };
   }, [roomCode, playerName, toast, navigate, isHost]);
 
   useEffect(() => {
+    socket.on("joinError", ({ message }) => {
+      console.log("📡 Received joinError:", { message, isInRoom: isInRoomRef.current, isHost });
+      if (isInRoomRef.current || isHost) {
+        console.warn("⚠️ Ignoring joinError as player is already in room:", message);
+        return;
+      }
+      toast({
+        title: "Join failed",
+        description: message,
+        status: "error",
+        duration: 3000,
+      });
+      setGameStarted(false);
+      setPlayers([]);
+      localStorage.removeItem("alreadyJoined");
+      localStorage.removeItem("playerName");
+      navigate("/");
+    });
+
     socket.on("playerList", ({ players }) => {
       setPlayers(players);
       if (players.length > 0 && !host) {
@@ -148,12 +171,15 @@ function RoomPage() {
       setCategory(category);
       setDoneSubmitting(false);
       setPhase("entry");
-      toast({
-        title: "Game Started!",
-        status: "info",
-        duration: 3000,
-        isClosable: true,
-      });
+      if (!toast.isActive("game-started")) {
+        toast({
+          id: "game-started",
+          title: "Game Started!",
+          status: "info",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
     });
 
     socket.on("newEntry", ({ entry }) => {
@@ -174,17 +200,18 @@ function RoomPage() {
     });
 
     socket.on("roomState", ({ players, phase, round, judgeName, category, state }) => {
+      console.log("🩺 Resyncing from roomState:", { phase, judgeName, state, players });
       setPlayers(players.map((p: { name: string }) => p.name));
       setPhase(phase);
       setRound(round);
       setJudge(judgeName || "");
       setCategory(category || "");
-      console.log("🩺 Resyncing from roomState:", { phase, judgeName, state });
       const me = (players as { name: string; role?: "player" | "spectator" }[]).find(
         (p) => p.name === playerName,
       );
       if (me?.role) {
         setRole(me.role);
+        isInRoomRef.current = true; // Confirm player is in room
       }
     });
 
@@ -202,16 +229,20 @@ function RoomPage() {
     });
 
     socket.on("toastWarning", ({ message }) => {
-      toast({
-        title: "Cannot advance yet",
-        description: message,
-        status: "warning",
-        duration: 4000,
-        isClosable: true,
-      });
+      if (!toast.isActive(`warning-${message}`)) {
+        toast({
+          id: `warning-${message}`,
+          title: "Cannot advance yet",
+          description: message,
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+      }
     });
 
     return () => {
+      socket.off("joinError");
       socket.off("playerList");
       socket.off("playerJoined");
       socket.off("gameStarted");
@@ -229,13 +260,16 @@ function RoomPage() {
       const hasEntries = entries.length >= 5;
 
       if (phase === "entry" && !isJudge && hasEntries) {
-        toast({
-          title: "Waiting for judge to advance...",
-          description: "Hang tight while the judge reviews entries.",
-          status: "info",
-          duration: 5000,
-          isClosable: true,
-        });
+        if (!toast.isActive("waiting-judge")) {
+          toast({
+            id: "waiting-judge",
+            title: "Waiting for judge to advance...",
+            description: "Hang tight while the judge reviews entries.",
+            status: "info",
+            duration: 5000,
+            isClosable: true,
+          });
+        }
       }
     }, 10000);
 
@@ -245,7 +279,15 @@ function RoomPage() {
   const handleStartGame = () => {
     socket.emit("startGame", { roomCode, roundLimit });
     setGameStarted(true);
-    toast({ title: "Game started!", status: "success", duration: 3000, isClosable: true });
+    if (!toast.isActive("game-started")) {
+      toast({
+        id: "game-started",
+        title: "Game started!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleEntrySubmit = (text: string) => {
@@ -295,13 +337,16 @@ function RoomPage() {
 
     socket.emit("submitEntry", { roomCode, playerName, entry: cleaned });
     setEntryText("");
-    toast({
-      title: "Entry submitted!",
-      description: `"${trimmed}" added.`,
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+    if (!toast.isActive(`submit-entry-${cleaned}`)) {
+      toast({
+        id: `submit-entry-${cleaned}`,
+        title: "Entry submitted!",
+        description: `"${trimmed}" added.`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleDoneSubmitting = () => {
@@ -318,12 +363,15 @@ function RoomPage() {
       return;
     }
     setDoneSubmitting(true);
-    toast({
-      title: "Marked as done submitting.",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
+    if (!toast.isActive("done-submitting")) {
+      toast({
+        id: "done-submitting",
+        title: "Marked as done submitting.",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleAdvanceToRankingPhase = () => {

@@ -71,13 +71,15 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
-      // Set localStorage to mark as joined *before* emitting joinGameRoom
+      // Set localStorage immediately
       localStorage.setItem("alreadyJoined", roomCode);
       localStorage.setItem("playerName", hostId);
+      console.log("📍 Set localStorage for host:", { roomCode, playerName: hostId });
 
-      // Wait for playerJoined confirmation before navigating
+      // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
         socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
+          console.log("📡 Received playerJoined:", { success, roomCode: joinedCode, playerName });
           if (success && joinedCode === roomCode && playerName === hostId) {
             resolve(true);
           } else {
@@ -85,24 +87,29 @@ function LandingPageContent() {
           }
         });
         socket.once("joinError", ({ message }) => {
+          console.log("📡 Received joinError during create:", message);
           reject(new Error(message));
         });
       });
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostId });
+      console.log("📡 Sent joinGameRoom for host:", { roomCode, playerName: hostId });
 
       await joinPromise;
 
-      toast({
-        id: `create-room-${roomCode}`,
-        title: "Room created and joined!",
-        description: `Code: ${roomCode}`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      if (!toast.isActive(`create-room-${roomCode}`)) {
+        toast({
+          id: `create-room-${roomCode}`,
+          title: "Room created and joined!",
+          description: `Code: ${roomCode}`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
 
       navigate(`/room/${roomCode}`, { state: { playerName: hostId, isHost: true } });
+      console.log("🚀 Navigated to room:", roomCode);
     } catch (error: any) {
       console.error("Create/Join error:", error.response?.data || error.message);
       localStorage.removeItem("alreadyJoined");
@@ -151,6 +158,7 @@ function LandingPageContent() {
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
         socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
+          console.log("📡 Received playerJoined:", { success, roomCode: joinedCode, playerName });
           if (success && joinedCode === room.code && playerName === playerId) {
             resolve(true);
           } else {
@@ -158,27 +166,32 @@ function LandingPageContent() {
           }
         });
         socket.once("joinError", ({ message }) => {
+          console.log("📡 Received joinError during join:", message);
           reject(new Error(message));
         });
       });
 
       socket.emit("joinGameRoom", { roomCode: room.code, playerName: playerId });
+      console.log("📡 Sent joinGameRoom for join:", { roomCode: room.code, playerName: playerId });
 
       await joinPromise;
 
       localStorage.setItem("alreadyJoined", room.code);
       localStorage.setItem("playerName", playerId);
 
-      toast({
-        id: `join-room-${room.code}`,
-        title: "Room joined!",
-        description: `Joined: ${room.code}`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      if (!toast.isActive(`join-room-${room.code}`)) {
+        toast({
+          id: `join-room-${room.code}`,
+          title: "Room joined!",
+          description: `Joined: ${room.code}`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
 
       navigate(`/room/${room.code}`, { state: { playerName: playerId, isHost: false } });
+      console.log("🚀 Navigated to room:", room.code);
     } catch (error: any) {
       console.error("Join error:", error.response?.data || error.message);
       toast({

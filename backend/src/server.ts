@@ -340,9 +340,14 @@ io.on("connection", (socket: IOSocket) => {
       return;
     }
 
+    console.log(
+      "📍 joinGameRoom players before check:",
+      room.players.map((p) => ({ id: p.id, name: p.name })),
+    );
     const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
     if (nameTaken) {
       socket.emit("joinError", { message: "Name already taken in this room." });
+      console.log("🚫 joinGameRoom rejected:", { playerName, socketId: socket.id });
       return;
     }
 
