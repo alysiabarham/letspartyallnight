@@ -22,7 +22,7 @@ function RoomPage() {
   const toast = useToast();
 
   const playerName = location.state?.playerName || "Guest";
-  const isHost = location.state?.isHost || false;
+  const isHost = location.state?.isHost || localStorage.getItem("isHost") === "true";
   const [players, setPlayers] = useState<string[]>([]);
   const [entries, setEntries] = useState<string[]>([]);
   const [entryText, setEntryText] = useState("");
@@ -38,7 +38,12 @@ function RoomPage() {
   const isInRoomRef = useRef(false);
 
   useEffect(() => {
-    console.log("📍 RoomPage mounted:", { roomCode, playerName, isHost });
+    console.log("📍 RoomPage mounted:", {
+      roomCode,
+      playerName,
+      isHost,
+      localStorageIsHost: localStorage.getItem("isHost"),
+    });
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
     });
@@ -70,10 +75,12 @@ function RoomPage() {
 
     const alreadyJoined = localStorage.getItem("alreadyJoined");
     const storedPlayerName = localStorage.getItem("playerName");
+    const storedIsHost = localStorage.getItem("isHost") === "true";
 
-    if (isHost || (alreadyJoined === roomCode && storedPlayerName === safeName)) {
+    if (isHost || storedIsHost || (alreadyJoined === roomCode && storedPlayerName === safeName)) {
       console.log("🛑 Host or already joined. Skipping join attempt:", {
         isHost,
+        storedIsHost,
         alreadyJoined,
         storedPlayerName,
         safeName,
@@ -126,17 +133,22 @@ function RoomPage() {
       });
     };
 
-    handleJoinRoom();
+    const timer = setTimeout(() => {
+      handleJoinRoom();
+    }, 500); // Delay to allow localStorage from App.tsx to set
 
-    return () => {
-      socket.off("playerJoined");
-    };
+    return () => clearTimeout(timer);
   }, [roomCode, playerName, toast, navigate, isHost]);
 
   useEffect(() => {
     socket.on("joinError", ({ message }) => {
-      console.log("📡 Received joinError:", { message, isInRoom: isInRoomRef.current, isHost });
-      if (isInRoomRef.current || isHost) {
+      console.log("📡 Received joinError:", {
+        message,
+        isInRoom: isInRoomRef.current,
+        isHost,
+        localStorageIsHost: localStorage.getItem("isHost"),
+      });
+      if (isInRoomRef.current || isHost || localStorage.getItem("isHost") === "true") {
         console.warn("⚠️ Ignoring joinError as player is already in room:", message);
         return;
       }
@@ -150,6 +162,7 @@ function RoomPage() {
       setPlayers([]);
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
+      localStorage.removeItem("isHost");
       navigate("/");
     });
 
@@ -211,8 +224,8 @@ function RoomPage() {
       );
       if (me?.role) {
         setRole(me.role);
-        isInRoomRef.current = true; // Confirm player is in room
       }
+      isInRoomRef.current = players.some((p: { name: string }) => p.name === playerName);
     });
 
     socket.on("phaseChange", ({ phase }) => {

@@ -71,10 +71,11 @@ function LandingPageContent() {
       });
       const { roomCode } = response.data;
 
-      // Set localStorage immediately
+      // Set localStorage immediately for host
       localStorage.setItem("alreadyJoined", roomCode);
       localStorage.setItem("playerName", hostId);
-      console.log("📍 Set localStorage for host:", { roomCode, playerName: hostId });
+      localStorage.setItem("isHost", "true");
+      console.log("📍 Set localStorage for host:", { roomCode, playerName: hostId, isHost: true });
 
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
@@ -114,6 +115,7 @@ function LandingPageContent() {
       console.error("Create/Join error:", error.response?.data || error.message);
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
+      localStorage.removeItem("isHost");
       toast({
         title: "Error creating room.",
         description: error.response?.data?.error || error.message || "Try again later.",
@@ -178,6 +180,7 @@ function LandingPageContent() {
 
       localStorage.setItem("alreadyJoined", room.code);
       localStorage.setItem("playerName", playerId);
+      localStorage.setItem("isHost", "false");
 
       if (!toast.isActive(`join-room-${room.code}`)) {
         toast({
