@@ -199,7 +199,7 @@ if (require.main === module) {
 // --- Rate Limiting ---
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowsMs
+  max: 100, // Limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again after 15 minutes.",
 });
 
@@ -212,7 +212,8 @@ const createRoomLimiter = rateLimit({
 // --- Middleware ---
 app.use(helmet());
 app.use(express.json());
-app.use(apiLimiter); // Apply apiLimiter globally to all routes
+app.use(apiLimiter);
+
 app.all("/socket.io/*", (_req, res) => {
   res.status(400).send("Polling transport blocked");
 });
@@ -230,11 +231,11 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/create-room", createRoomLimiter, async (req, res) => {
-  const { hostId } = req.body as { hostId: string };
-  const hostName = hostId;
+  const { hostId, hostName } = req.body as { hostId: string; hostName: string };
 
-  if (!hostId || !isAlphanumeric(hostId)) {
-    return res.status(400).json({ error: "Host name must be alphanumeric." });
+  if (!hostId || !hostName || !isAlphanumeric(hostId) || !isAlphanumeric(hostName)) {
+    console.log("🚫 /create-room invalid payload:", { hostId, hostName });
+    return res.status(400).json({ error: "Host ID and name must be alphanumeric." });
   }
 
   let roomCode = generateRoomCode();
@@ -247,15 +248,16 @@ app.post("/create-room", createRoomLimiter, async (req, res) => {
   const newRoom = createRoom(roomCode, hostId, hostName);
   rooms[roomCode] = newRoom;
 
-  console.log(`Room created: ${roomCode} by ${hostId}`);
-  // Add host to room explicitly
-  await io.to(newRoom.hostId).emit("playerJoined", {
+  console.log(`Room created: ${roomCode} by ${hostName} (hostId: ${hostId})`);
+  // Emit playerJoined to the host
+  await io.to(hostId).emit("playerJoined", {
     success: true,
     roomCode,
     playerName: hostName,
     players: newRoom.players,
     message: `${hostName} has created and joined the room.`,
   });
+
   return res.status(201).json({
     message: "Room created successfully!",
     roomCode,
@@ -269,12 +271,16 @@ app.post("/join-room", async (req, res) => {
   if (
     typeof roomCode !== "string" ||
     typeof playerId !== "string" ||
-    typeof socketId !== "string" ||
     !isAlphanumeric(roomCode) ||
     !isAlphanumeric(playerId)
   ) {
     console.log("🚫 /join-room invalid payload:", { roomCode, playerId, socketId });
-    return res.status(400).json({ error: "Invalid roomCode, playerId, or socketId" });
+    return res.status(400).json({ error: "Invalid roomCode or playerId" });
+  }
+
+  if (!socketId) {
+    console.log("🚫 /join-room missing socketId:", { roomCode, playerId });
+    return res.status(400).json({ error: "socketId is required" });
   }
 
   const upperCode = roomCode.toUpperCase();
@@ -290,13 +296,16 @@ app.post("/join-room", async (req, res) => {
     return res.status(400).json({ error: "Room is full" });
   }
 
-  if (room.players.some((p) => p.name === playerId)) {
+  if (room.players.some((p) => p.name === playerId && p.id !== socketId)) {
     console.log("🚫 /join-room name taken:", { playerId, roomCode: upperCode });
     return res.status(400).json({ error: "Name already taken in this room" });
   }
 
-  // Add player to room
-  room.players.push({ id: socketId, name: playerId, role: "player" });
+  // Add player to room if not already present
+  const existingPlayer = room.players.find((p) => p.id === socketId);
+  if (!existingPlayer) {
+    room.players.push({ id: socketId, name: playerId, role: "player" });
+  }
 
   console.log("✅ /join-room success:", { roomCode: upperCode, playerId, socketId });
 
@@ -321,6 +330,10 @@ app.post("/join-room", async (req, res) => {
 io.on("connection", (socket: IOSocket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
 
+  socket.on("checkSocketId", ({ socketId }) => {
+    console.log("📍 Socket ID check:", { received: socketId, actual: socket.id });
+  });
+
   socket.on("joinGameRoom", async (payload: { roomCode: string; playerName: string }) => {
     const { roomCode, playerName } = payload;
     const upperCode = roomCode.toUpperCase();
@@ -332,6 +345,7 @@ io.on("connection", (socket: IOSocket) => {
       playerName.length > 20
     ) {
       socket.emit("joinError", { message: "Invalid room code or name." });
+      console.log("🚫 joinGameRoom invalid payload:", { roomCode, playerName });
       return;
     }
 
@@ -340,6 +354,7 @@ io.on("connection", (socket: IOSocket) => {
 
     if (!room) {
       socket.emit("joinError", { message: "Room not found." });
+      console.log("🚫 joinGameRoom room not found:", upperCode);
       return;
     }
 
@@ -347,16 +362,20 @@ io.on("connection", (socket: IOSocket) => {
       "📍 joinGameRoom players before check:",
       room.players.map((p) => ({ id: p.id, name: p.name })),
     );
-    const nameTaken = room.players.some((p) => p.name === playerName && p.id !== socket.id);
-    if (nameTaken) {
+
+    // Allow host to join if their socket.id matches hostId
+    if (room.hostId === socket.id && room.players.some((p) => p.name === playerName)) {
+      console.log(`✅ joinGameRoom host rejoined: ${playerName} (${socket.id}) in ${upperCode}`);
+    } else if (room.players.some((p) => p.name === playerName && p.id !== socket.id)) {
       socket.emit("joinError", { message: "Name already taken in this room." });
       console.log("🚫 joinGameRoom rejected:", { playerName, socketId: socket.id });
       return;
-    }
-
-    const existingPlayer = room.players.find((p) => p.name === playerName);
-    if (!existingPlayer) {
-      room.players.push({ id: socket.id, name: playerName, role: "player" });
+    } else {
+      // Add new player if not already present
+      const existingPlayer = room.players.find((p) => p.id === socket.id);
+      if (!existingPlayer) {
+        room.players.push({ id: socket.id, name: playerName, role: "player" });
+      }
     }
 
     console.log(`🌐 ${playerName} (${socket.id}) joined ${upperCode}`);

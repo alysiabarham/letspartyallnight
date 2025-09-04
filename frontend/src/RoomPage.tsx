@@ -16,12 +16,12 @@ import axios from "axios";
 import { socket } from "./socket";
 
 function RoomPage() {
-  const { roomCode } = useParams();
+  const { roomCode } = useParams<{ roomCode: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
 
-  const playerName = location.state?.playerName || "Guest";
+  const playerName = location.state?.playerName || localStorage.getItem("playerName") || "Guest";
   const isHost = location.state?.isHost || localStorage.getItem("isHost") === "true";
   const [players, setPlayers] = useState<string[]>([]);
   const [entries, setEntries] = useState<string[]>([]);
@@ -46,6 +46,7 @@ function RoomPage() {
     });
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
+      socket.emit("checkSocketId", { socketId: socket.id }); // Debug socket ID
     });
     socket.on("disconnect", () => {
       console.log("❌ Socket disconnected");
@@ -80,8 +81,9 @@ function RoomPage() {
     const storedPlayerName = localStorage.getItem("playerName");
     const storedIsHost = localStorage.getItem("isHost") === "true";
 
+    // Skip join attempt for hosts or already joined players
     if (isHost || storedIsHost || (alreadyJoined === roomCode && storedPlayerName === safeName)) {
-      console.log("🛑 Host or already joined. Skipping join attempt:", {
+      console.log("🛑 Host or already joined. Emitting setRole:", {
         isHost,
         storedIsHost,
         alreadyJoined,
@@ -93,6 +95,7 @@ function RoomPage() {
       return;
     }
 
+    // Join logic for non-hosts
     const handleJoinRoom = async () => {
       if (!socket.connected) {
         console.warn("🛑 Socket not connected yet.");
@@ -108,6 +111,7 @@ function RoomPage() {
       console.log("📡 Sending joinGameRoom:", {
         roomCode,
         playerName: safeName,
+        socketId: socket.id,
       });
 
       socket.emit("joinGameRoom", { roomCode, playerName: safeName });
@@ -139,7 +143,7 @@ function RoomPage() {
 
     const timer = setTimeout(() => {
       handleJoinRoom();
-    }, 1000); // Increased delay to ensure localStorage is set
+    }, 1000); // Delay to ensure socket connection
 
     return () => clearTimeout(timer);
   }, [roomCode, playerName, toast, navigate, isHost]);

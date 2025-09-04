@@ -16,7 +16,7 @@ import ResultsPage from "./ResultsPage";
 import FinalResultsPage from "./FinalResultsPage";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
-console.log("Backend URL:", backendUrl);
+console.log("🧪 Backend URL:", backendUrl);
 
 function LandingPageContent() {
   const toast = useToast();
@@ -29,6 +29,7 @@ function LandingPageContent() {
     socket.on("connect", () => {
       setIsSocketConnected(true);
       console.log("✅ Socket connected:", socket.id);
+      socket.emit("checkSocketId", { socketId: socket.id }); // Debug socket ID
     });
     socket.on("disconnect", () => {
       setIsSocketConnected(false);
@@ -76,24 +77,30 @@ function LandingPageContent() {
       localStorage.removeItem("isHost");
       console.log("🧹 Cleared localStorage for new room creation");
 
-      const hostId = playerNameInput.trim();
+      const hostId = socket.id; // Use socket.id as hostId
+      const hostName = playerNameInput.trim();
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId,
+        hostName,
       });
       const { roomCode } = response.data;
-      console.log("📍 Created room:", { roomCode, hostId });
+      console.log("📍 Created room:", { roomCode, hostId, hostName });
 
       // Set localStorage for host
       localStorage.setItem("alreadyJoined", roomCode);
-      localStorage.setItem("playerName", hostId);
+      localStorage.setItem("playerName", hostName);
       localStorage.setItem("isHost", "true");
-      console.log("📍 Set localStorage for host:", { roomCode, playerName: hostId, isHost: true });
+      console.log("📍 Set localStorage for host:", {
+        roomCode,
+        playerName: hostName,
+        isHost: true,
+      });
 
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
         socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
           console.log("📡 Received playerJoined:", { success, roomCode: joinedCode, playerName });
-          if (success && joinedCode === roomCode && playerName === hostId) {
+          if (success && joinedCode === roomCode && playerName === hostName) {
             resolve(true);
           } else {
             reject(new Error("Failed to confirm join"));
@@ -105,8 +112,8 @@ function LandingPageContent() {
         });
       });
 
-      socket.emit("joinGameRoom", { roomCode, playerName: hostId });
-      console.log("📡 Sent joinGameRoom for host:", { roomCode, playerName: hostId });
+      socket.emit("joinGameRoom", { roomCode, playerName: hostName });
+      console.log("📡 Sent joinGameRoom for host:", { roomCode, playerName: hostName });
 
       await joinPromise;
 
@@ -121,10 +128,10 @@ function LandingPageContent() {
         });
       }
 
-      navigate(`/room/${roomCode}`, { state: { playerName: hostId, isHost: true } });
+      navigate(`/room/${roomCode}`, { state: { playerName: hostName, isHost: true } });
       console.log("🚀 Navigated to room:", roomCode);
     } catch (error: any) {
-      console.error("Create/Join error:", error.response?.data || error.message);
+      console.error("🚫 Create/Join error:", error.response?.data || error.message);
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
@@ -216,7 +223,7 @@ function LandingPageContent() {
       navigate(`/room/${room.code}`, { state: { playerName: playerId, isHost: false } });
       console.log("🚀 Navigated to room:", room.code);
     } catch (error: any) {
-      console.error("Join error:", error.response?.data || error.message);
+      console.error("🚫 Join error:", error.response?.data || error.message);
       toast({
         title: "Join failed.",
         description: error.response?.data?.error || error.message || "Room not found or full.",
