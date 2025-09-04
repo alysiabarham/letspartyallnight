@@ -30,8 +30,13 @@ function LandingPageContent() {
       setIsSocketConnected(true);
       console.log("✅ Socket connected:", socket.id);
     });
+    socket.on("disconnect", () => {
+      setIsSocketConnected(false);
+      console.log("❌ Socket disconnected");
+    });
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
     };
   }, []);
 
@@ -65,13 +70,20 @@ function LandingPageContent() {
     }
 
     try {
+      // Clear localStorage to prevent name conflicts
+      localStorage.removeItem("alreadyJoined");
+      localStorage.removeItem("playerName");
+      localStorage.removeItem("isHost");
+      console.log("🧹 Cleared localStorage for new room creation");
+
       const hostId = playerNameInput.trim();
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId,
       });
       const { roomCode } = response.data;
+      console.log("📍 Created room:", { roomCode, hostId });
 
-      // Set localStorage immediately for host
+      // Set localStorage for host
       localStorage.setItem("alreadyJoined", roomCode);
       localStorage.setItem("playerName", hostId);
       localStorage.setItem("isHost", "true");
@@ -149,13 +161,21 @@ function LandingPageContent() {
 
     try {
       const playerId = playerNameInput.trim();
+      const upperRoomCode = roomCodeInput.trim().toUpperCase();
+      console.log("📍 Sending join-room request:", {
+        roomCode: upperRoomCode,
+        playerId,
+        socketId: socket.id,
+      });
+
       const response = await axios.post(`${backendUrl}/join-room`, {
-        roomCode: roomCodeInput,
+        roomCode: upperRoomCode,
         playerId,
         socketId: socket.id,
       });
 
       const { room } = response.data;
+      console.log("📍 Join-room response:", { roomCode: room.code, playerId });
 
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {

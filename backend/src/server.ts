@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Room, PlayerResult, SubmitGuessPayload, RankingPayload } from "./types";
 import { Server } from "socket.io";
-import type { SocketServerEvents } from "./types.ts";
+import type { SocketServerEvents } from "./types";
 import type { ServerToClientEvents, ClientToServerEvents } from "./socketTypes";
 import type { Player } from "./types";
 import { Socket as IOSocket } from "socket.io";
@@ -196,23 +196,23 @@ if (require.main === module) {
   });
 }
 
-// --- Middleware --- hi Salt
-app.use(helmet());
-app.use(express.json());
-
 // --- Rate Limiting ---
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowsMs
   message: "Too many requests from this IP, please try again after 15 minutes.",
 });
 
 const createRoomLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit each IP to 10 room creation attempts per hour
   message: "Too many room creation attempts from this IP, please try again after an hour.",
 });
 
+// --- Middleware ---
+app.use(helmet());
+app.use(express.json());
+app.use(apiLimiter); // Apply apiLimiter globally to all routes
 app.all("/socket.io/*", (_req, res) => {
   res.status(400).send("Polling transport blocked");
 });
@@ -263,12 +263,8 @@ app.post("/create-room", createRoomLimiter, async (req, res) => {
   });
 });
 
-app.post("/join-room", apiLimiter, async (req, res) => {
-  const { roomCode, playerId, socketId } = req.body as {
-    roomCode?: string;
-    playerId?: string;
-    socketId?: string;
-  };
+app.post("/join-room", async (req, res) => {
+  const { roomCode, playerId, socketId } = req.body;
 
   if (
     typeof roomCode !== "string" ||
@@ -277,28 +273,34 @@ app.post("/join-room", apiLimiter, async (req, res) => {
     !isAlphanumeric(roomCode) ||
     !isAlphanumeric(playerId)
   ) {
-    return res.status(400).json({ error: "Invalid roomCode, playerId, or socketId." });
+    console.log("🚫 /join-room invalid payload:", { roomCode, playerId, socketId });
+    return res.status(400).json({ error: "Invalid roomCode, playerId, or socketId" });
   }
 
   const upperCode = roomCode.toUpperCase();
   const room = rooms[upperCode];
 
   if (!room) {
-    return res.status(404).json({ error: "Room not found." });
+    console.log("🚫 /join-room room not found:", upperCode);
+    return res.status(404).json({ error: "Room not found" });
   }
 
-  const existingPlayer = room.players.find((p) => p.name === playerId);
-  if (existingPlayer && existingPlayer.id !== socketId) {
-    return res.status(409).json({ error: "Name already taken in this room." });
+  if (room.players.length >= 10) {
+    console.log("🚫 /join-room room full:", upperCode);
+    return res.status(400).json({ error: "Room is full" });
   }
 
-  if (!existingPlayer) {
-    room.players.push({ id: socketId, name: playerId, role: "player" });
-    console.log(`✅ ${playerId} added to room ${upperCode}`);
-  } else {
-    console.log(`🔁 ${playerId} already in room ${upperCode}, confirming join`);
+  if (room.players.some((p) => p.name === playerId)) {
+    console.log("🚫 /join-room name taken:", { playerId, roomCode: upperCode });
+    return res.status(400).json({ error: "Name already taken in this room" });
   }
 
+  // Add player to room
+  room.players.push({ id: socketId, name: playerId, role: "player" });
+
+  console.log("✅ /join-room success:", { roomCode: upperCode, playerId, socketId });
+
+  // Emit playerJoined to the joining player
   await io.to(socketId).emit("playerJoined", {
     success: true,
     roomCode: upperCode,
@@ -307,11 +309,12 @@ app.post("/join-room", apiLimiter, async (req, res) => {
     message: `${playerId} has joined the game.`,
   });
 
+  // Update all players in the room with the new player list
   io.to(upperCode).emit("playerList", {
     players: room.players.map((p: Player) => p.name),
   });
 
-  return res.status(200).json({ message: "Successfully joined room!", room });
+  return res.status(200).json({ message: "Successfully joined room!", room: { code: upperCode } });
 });
 
 // --- Socket.IO Events ---

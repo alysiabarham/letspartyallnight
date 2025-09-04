@@ -47,9 +47,12 @@ function RoomPage() {
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
     });
-
+    socket.on("disconnect", () => {
+      console.log("❌ Socket disconnected");
+    });
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
     };
   }, []);
 
@@ -119,6 +122,7 @@ function RoomPage() {
           isInRoomRef.current = true;
           localStorage.setItem("alreadyJoined", roomCode);
           localStorage.setItem("playerName", safeName);
+          localStorage.setItem("isHost", "false");
           if (!toast.isActive(`join-room-${roomCode}`)) {
             toast({
               id: `join-room-${roomCode}`,
@@ -135,7 +139,7 @@ function RoomPage() {
 
     const timer = setTimeout(() => {
       handleJoinRoom();
-    }, 500); // Delay to allow localStorage from App.tsx to set
+    }, 1000); // Increased delay to ensure localStorage is set
 
     return () => clearTimeout(timer);
   }, [roomCode, playerName, toast, navigate, isHost]);
@@ -147,6 +151,7 @@ function RoomPage() {
         isInRoom: isInRoomRef.current,
         isHost,
         localStorageIsHost: localStorage.getItem("isHost"),
+        players,
       });
       if (isInRoomRef.current || isHost || localStorage.getItem("isHost") === "true") {
         console.warn("⚠️ Ignoring joinError as player is already in room:", message);
@@ -167,6 +172,7 @@ function RoomPage() {
     });
 
     socket.on("playerList", ({ players }) => {
+      console.log("📡 Received playerList:", players);
       setPlayers(players);
       if (players.length > 0 && !host) {
         setHost(players[0]);
@@ -174,6 +180,7 @@ function RoomPage() {
     });
 
     socket.on("playerJoined", ({ players: playerList }) => {
+      console.log("📡 Received playerJoined with players:", playerList);
       setPlayers(playerList.map((p: { id: string; name: string }) => p.name));
     });
 
@@ -226,6 +233,7 @@ function RoomPage() {
         setRole(me.role);
       }
       isInRoomRef.current = players.some((p: { name: string }) => p.name === playerName);
+      console.log("📍 Updated isInRoomRef:", isInRoomRef.current, "Player in players:", playerName);
     });
 
     socket.on("phaseChange", ({ phase }) => {
