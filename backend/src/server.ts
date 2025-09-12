@@ -353,7 +353,7 @@ app.post("/join-room", async (req, res) => {
     .json({ message: "Successfully joined room!", room: { code: upperCode } });
 });
 
-// --- Socket.IO Events ---
+// --- Socket.IO Events --- hi Salt
 io.on("connection", (socket: IOSocket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
 

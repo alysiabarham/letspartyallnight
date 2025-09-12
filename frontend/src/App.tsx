@@ -76,7 +76,7 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected) {
+    if (!isSocketConnected || !socket.id) {
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -189,7 +189,7 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected) {
+    if (!isSocketConnected || !socket.id) {
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -334,7 +334,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleCreateRoom}
         w="200px"
-        isDisabled={!isSocketConnected}
+        isDisabled={!isSocketConnected || !socket.id}
       >
         CREATE NEW ROOM
       </Button>
@@ -367,7 +367,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleJoinRoom}
         w="200px"
-        isDisabled={!isSocketConnected}
+        isDisabled={!isSocketConnected || !socket.id}
       >
         JOIN ROOM
       </Button>
