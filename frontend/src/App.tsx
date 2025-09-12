@@ -1,7 +1,21 @@
 import React, { useEffect } from "react";
 import { useToast } from "@chakra-ui/react";
-import { Routes, Route, Navigate, HashRouter as Router, useNavigate } from "react-router-dom";
-import { ChakraProvider, Box, VStack, Heading, Text, Input, Button } from "@chakra-ui/react";
+import {
+  Routes,
+  Route,
+  Navigate,
+  HashRouter as Router,
+  useNavigate,
+} from "react-router-dom";
+import {
+  ChakraProvider,
+  Box,
+  VStack,
+  Heading,
+  Text,
+  Input,
+  Button,
+} from "@chakra-ui/react";
 import axios from "axios";
 import "./App.css";
 import { socket } from "./socket";
@@ -22,7 +36,9 @@ function LandingPageContent() {
   const toast = useToast();
   const [roomCodeInput, setRoomCodeInput] = React.useState("");
   const [playerNameInput, setPlayerNameInput] = React.useState("");
-  const [isSocketConnected, setIsSocketConnected] = React.useState(socket.connected);
+  const [isSocketConnected, setIsSocketConnected] = React.useState(
+    socket.connected
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,6 +95,7 @@ function LandingPageContent() {
 
       const hostId = socket.id; // Use socket.id as hostId
       const hostName = playerNameInput.trim();
+      console.log("📍 Sending /create-room:", { hostId, hostName });
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId,
         hostName,
@@ -98,14 +115,21 @@ function LandingPageContent() {
 
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
-        socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
-          console.log("📡 Received playerJoined:", { success, roomCode: joinedCode, playerName });
-          if (success && joinedCode === roomCode && playerName === hostName) {
-            resolve(true);
-          } else {
-            reject(new Error("Failed to confirm join"));
+        socket.once(
+          "playerJoined",
+          ({ success, roomCode: joinedCode, playerName }) => {
+            console.log("📡 Received playerJoined:", {
+              success,
+              roomCode: joinedCode,
+              playerName,
+            });
+            if (success && joinedCode === roomCode && playerName === hostName) {
+              resolve(true);
+            } else {
+              reject(new Error("Failed to confirm join"));
+            }
           }
-        });
+        );
         socket.once("joinError", ({ message }) => {
           console.log("📡 Received joinError during create:", message);
           reject(new Error(message));
@@ -113,7 +137,10 @@ function LandingPageContent() {
       });
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostName });
-      console.log("📡 Sent joinGameRoom for host:", { roomCode, playerName: hostName });
+      console.log("📡 Sent joinGameRoom for host:", {
+        roomCode,
+        playerName: hostName,
+      });
 
       await joinPromise;
 
@@ -128,16 +155,22 @@ function LandingPageContent() {
         });
       }
 
-      navigate(`/room/${roomCode}`, { state: { playerName: hostName, isHost: true } });
+      navigate(`/room/${roomCode}`, {
+        state: { playerName: hostName, isHost: true },
+      });
       console.log("🚀 Navigated to room:", roomCode);
     } catch (error: any) {
-      console.error("🚫 Create/Join error:", error.response?.data || error.message);
+      console.error(
+        "🚫 Create/Join error:",
+        error.response?.data || error.message
+      );
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
       toast({
         title: "Error creating room.",
-        description: error.response?.data?.error || error.message || "Try again later.",
+        description:
+          error.response?.data?.error || error.message || "Try again later.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -169,7 +202,7 @@ function LandingPageContent() {
     try {
       const playerId = playerNameInput.trim();
       const upperRoomCode = roomCodeInput.trim().toUpperCase();
-      console.log("📍 Sending join-room request:", {
+      console.log("📍 Sending /join-room:", {
         roomCode: upperRoomCode,
         playerId,
         socketId: socket.id,
@@ -186,22 +219,39 @@ function LandingPageContent() {
 
       // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
-        socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName }) => {
-          console.log("📡 Received playerJoined:", { success, roomCode: joinedCode, playerName });
-          if (success && joinedCode === room.code && playerName === playerId) {
-            resolve(true);
-          } else {
-            reject(new Error("Failed to confirm join"));
+        socket.once(
+          "playerJoined",
+          ({ success, roomCode: joinedCode, playerName }) => {
+            console.log("📡 Received playerJoined:", {
+              success,
+              roomCode: joinedCode,
+              playerName,
+            });
+            if (
+              success &&
+              joinedCode === room.code &&
+              playerName === playerId
+            ) {
+              resolve(true);
+            } else {
+              reject(new Error("Failed to confirm join"));
+            }
           }
-        });
+        );
         socket.once("joinError", ({ message }) => {
           console.log("📡 Received joinError during join:", message);
           reject(new Error(message));
         });
       });
 
-      socket.emit("joinGameRoom", { roomCode: room.code, playerName: playerId });
-      console.log("📡 Sent joinGameRoom for join:", { roomCode: room.code, playerName: playerId });
+      socket.emit("joinGameRoom", {
+        roomCode: room.code,
+        playerName: playerId,
+      });
+      console.log("📡 Sent joinGameRoom for join:", {
+        roomCode: room.code,
+        playerName: playerId,
+      });
 
       await joinPromise;
 
@@ -220,13 +270,18 @@ function LandingPageContent() {
         });
       }
 
-      navigate(`/room/${room.code}`, { state: { playerName: playerId, isHost: false } });
+      navigate(`/room/${room.code}`, {
+        state: { playerName: playerId, isHost: false },
+      });
       console.log("🚀 Navigated to room:", room.code);
     } catch (error: any) {
       console.error("🚫 Join error:", error.response?.data || error.message);
       toast({
         title: "Join failed.",
-        description: error.response?.data?.error || error.message || "Room not found or full.",
+        description:
+          error.response?.data?.error ||
+          error.message ||
+          "Room not found or full.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -246,7 +301,8 @@ function LandingPageContent() {
           </span>{" "}
           <span className="word-yellow">All</span>{" "}
           <span className="word-orange">
-            Ni<span className="flicker-letter">g</span>h<span className="flicker-letter">t</span>!
+            Ni<span className="flicker-letter">g</span>h
+            <span className="flicker-letter">t</span>!
           </span>
         </h1>
       </div>
