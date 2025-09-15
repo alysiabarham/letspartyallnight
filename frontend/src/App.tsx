@@ -96,11 +96,17 @@ function LandingPageContent() {
 
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
-      console.log("📍 Sending /create-room:", { hostId, hostName });
+
+      console.log("📍 Sending /create-room:", {
+        hostId,
+        hostName,
+      });
+
       const response = await axios.post(`${backendUrl}/create-room`, {
         hostId,
         hostName,
       });
+
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
 
