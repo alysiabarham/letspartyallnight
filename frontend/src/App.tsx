@@ -28,6 +28,7 @@ import JudgeRankingPage from "./JudgeRankingPage";
 import GuesserRankingPage from "./GuesserRankingPage";
 import ResultsPage from "./ResultsPage";
 import FinalResultsPage from "./FinalResultsPage";
+import { AxiosError } from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("🧪 Backend URL:", backendUrl);
@@ -93,7 +94,7 @@ function LandingPageContent() {
       localStorage.removeItem("isHost");
       console.log("🧹 Cleared localStorage for new room creation");
 
-      const hostId = socket.id; // Use socket.id as hostId
+      const hostId = socket.id;
       const hostName = playerNameInput.trim();
       console.log("📍 Sending /create-room:", { hostId, hostName });
       const response = await axios.post(`${backendUrl}/create-room`, {
@@ -159,18 +160,20 @@ function LandingPageContent() {
         state: { playerName: hostName, isHost: true },
       });
       console.log("🚀 Navigated to room:", roomCode);
-    } catch (error: any) {
-      console.error(
-        "🚫 Create/Join error:",
-        error.response?.data || error.message
-      );
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("🚫 Create/Join error:", err.response?.data || err.message);
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
       toast({
         title: "Error creating room.",
         description:
-          error.response?.data?.error || error.message || "Try again later.",
+          typeof err.response?.data === "object" &&
+          err.response?.data !== null &&
+          "error" in err.response.data
+            ? (err.response.data as { error: string }).error
+            : err.message || "Try again later.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -274,14 +277,17 @@ function LandingPageContent() {
         state: { playerName: playerId, isHost: false },
       });
       console.log("🚀 Navigated to room:", room.code);
-    } catch (error: any) {
-      console.error("🚫 Join error:", error.response?.data || error.message);
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("🚫 Join error:", err.response?.data || err.message);
       toast({
         title: "Join failed.",
         description:
-          error.response?.data?.error ||
-          error.message ||
-          "Room not found or full.",
+          typeof err.response?.data === "object" &&
+          err.response?.data !== null &&
+          "error" in err.response.data
+            ? (err.response.data as { error: string }).error
+            : err.message || "Room not found or full.",
         status: "error",
         duration: 3000,
         isClosable: true,

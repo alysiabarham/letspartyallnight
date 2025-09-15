@@ -275,6 +275,10 @@ app.post("/create-room", createRoomLimiter, async (req, res) => {
     message: `${hostName} has created and joined the room.`,
   });
 
+  io.to(roomCode).emit("playerList", {
+    players: newRoom.players.map((p: Player) => p.name),
+  });
+
   return res.status(201).json({
     message: "Room created successfully!",
     roomCode,
@@ -353,7 +357,7 @@ app.post("/join-room", async (req, res) => {
     .json({ message: "Successfully joined room!", room: { code: upperCode } });
 });
 
-// --- Socket.IO Events --- hi Salt
+// --- Socket.IO Events ---
 io.on("connection", (socket: IOSocket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
 
@@ -697,6 +701,10 @@ io.on("connection", (socket: IOSocket) => {
 
     const shuffled = shuffleArray(ranking);
     io.to(upperCode).emit("sendAllEntries", { entries: shuffled });
+
+    io.to(upperCode).emit("playerList", {
+      players: room.players.map((p: Player) => p.name),
+    });
 
     console.log(
       `✅ Shuffled ranking sent to guessers in ${upperCode}:`,
