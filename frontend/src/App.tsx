@@ -102,10 +102,15 @@ function LandingPageContent() {
         hostName,
       });
 
-      const response = await axios.post(`${backendUrl}/create-room`, {
-        hostId,
-        hostName,
-      });
+      const response = await axios.post(
+        `${backendUrl}/create-room`,
+        { hostId, hostName },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
