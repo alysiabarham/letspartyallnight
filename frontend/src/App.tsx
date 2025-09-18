@@ -32,7 +32,6 @@ import { AxiosError } from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("🧪 Backend URL:", backendUrl);
-const [socketIdReady, setSocketIdReady] = React.useState(false);
 
 function LandingPageContent() {
   const toast = useToast();
@@ -41,6 +40,7 @@ function LandingPageContent() {
   const [isSocketConnected, setIsSocketConnected] = React.useState(
     socket.connected
   );
+  const [socketIdReady, setSocketIdReady] = React.useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {

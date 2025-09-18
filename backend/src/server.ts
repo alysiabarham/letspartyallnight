@@ -205,7 +205,7 @@ if (require.main === module) {
   });
 }
 
-// --- Rate Limiting ---
+// --- Rate Limiting --- hi Salt
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
