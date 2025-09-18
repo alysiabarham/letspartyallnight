@@ -216,7 +216,7 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected || !socket.id) {
+    if (!isSocketConnected || !socketIdReady) {
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -319,7 +319,7 @@ function LandingPageContent() {
     }
   };
 
-  if (!isSocketConnected || !socket.id) {
+  if (!isSocketConnected || !socketIdReady) {
     return (
       <VStack
         spacing={8}
@@ -413,7 +413,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleJoinRoom}
         w="200px"
-        isDisabled={!isSocketConnected || !socket.id}
+        isDisabled={!isSocketConnected || !socketIdReady}
       >
         JOIN ROOM
       </Button>
