@@ -76,8 +76,9 @@ function LandingPageContent() {
   };
 
   console.log("🧪 playerNameInput value:", playerNameInput);
-
-  console.log("🧪 DEBUG: playerNameInput =", playerNameInput);
+  console.log("🧪 handleCreateRoom triggered");
+  console.log("🧪 socket.id =", socket.id);
+  console.log("🧪 playerNameInput =", playerNameInput);
 
   const handleCreateRoom = async () => {
     if (!playerNameInput.trim()) {
@@ -106,6 +107,18 @@ function LandingPageContent() {
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
       console.log("🧹 Cleared localStorage for new room creation");
+
+      if (!socket.id) {
+        console.error("🚫 socket.id is undefined — aborting room creation");
+        toast({
+          title: "Socket not ready.",
+          description: "Please wait for connection before creating a room.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
 
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
@@ -386,7 +399,9 @@ function LandingPageContent() {
         size="lg"
         onClick={handleCreateRoom}
         w="200px"
-        isDisabled={!isSocketConnected || !socketIdReady}
+        isDisabled={
+          !isSocketConnected || !socketIdReady || !playerNameInput.trim()
+        }
       >
         CREATE NEW ROOM
       </Button>
