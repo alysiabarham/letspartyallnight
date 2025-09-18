@@ -138,11 +138,15 @@ function LandingPageContent() {
 
       console.log("🧪 FINAL Axios payload:", payload);
 
-      const response = await axios.post(`${backendUrl}/create-room`, payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await axios.post(
+        `${backendUrl}/create-room`,
+        JSON.stringify(payload),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
