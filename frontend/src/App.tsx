@@ -77,6 +77,8 @@ function LandingPageContent() {
 
   console.log("🧪 playerNameInput value:", playerNameInput);
 
+  console.log("🧪 DEBUG: playerNameInput =", playerNameInput);
+
   const handleCreateRoom = async () => {
     if (!playerNameInput.trim()) {
       toast({
@@ -108,16 +110,20 @@ function LandingPageContent() {
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
 
+      console.log("🧪 DEBUG: hostId =", hostId);
+      console.log("🧪 DEBUG: hostName =", hostName);
+
       console.log("📍 Sending /create-room:", {
         hostId,
         hostName,
       });
 
-      console.log("🧪 Axios payload:", JSON.stringify({ hostId, hostName }));
-
       const response = await axios.post(
         `${backendUrl}/create-room`,
-        { hostId, hostName },
+        {
+          hostId: socket.id,
+          hostName: playerNameInput.trim(),
+        },
         {
           headers: {
             "Content-Type": "application/json",
