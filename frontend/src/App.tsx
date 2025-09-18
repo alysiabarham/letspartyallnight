@@ -44,10 +44,15 @@ function LandingPageContent() {
 
   useEffect(() => {
     socket.on("connect", () => {
-      setIsSocketConnected(true);
-      console.log("✅ Socket connected:", socket.id);
-      socket.emit("checkSocketId", { socketId: socket.id }); // Debug socket ID
+      const id = socket.id;
+      if (id) {
+        setIsSocketConnected(true);
+        console.log("✅ Socket connected:", id);
+      } else {
+        console.warn("⚠️ Socket connected but ID is missing");
+      }
     });
+
     socket.on("disconnect", () => {
       setIsSocketConnected(false);
       console.log("❌ Socket disconnected");
