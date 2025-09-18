@@ -241,8 +241,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/create-room", createRoomLimiter, async (req, res) => {
-  const hostId = req.body?.hostId;
-  const hostName = req.body?.hostName;
+  console.log("🧪 RAW req.body:", req.body);
+
+  const { hostId, hostName } = req.body;
+
+  console.log("🧪 Parsed hostId:", hostId);
+  console.log("🧪 Parsed hostName:", hostName);
   console.log("🧪 Received /create-room payload:", req.body);
 
   if (

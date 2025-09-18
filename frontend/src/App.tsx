@@ -131,18 +131,18 @@ function LandingPageContent() {
         hostName,
       });
 
-      const response = await axios.post(
-        `${backendUrl}/create-room`,
-        {
-          hostId: socket.id,
-          hostName: playerNameInput.trim(),
+      const payload = {
+        hostId: socket.id,
+        hostName: playerNameInput.trim(),
+      };
+
+      console.log("🧪 FINAL Axios payload:", payload);
+
+      const response = await axios.post(`${backendUrl}/create-room`, payload, {
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      });
 
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
