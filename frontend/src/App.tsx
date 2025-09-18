@@ -20,7 +20,7 @@ import axios from "axios";
 import "./App.css";
 import { socket } from "./socket";
 
-// Pages
+// Pages hi Salt
 import Home from "./pages/Home";
 import RoomPage from "./RoomPage";
 import EnterRoom from "./pages/EnterRoom";
