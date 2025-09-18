@@ -123,6 +123,7 @@ function LandingPageContent() {
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
 
+      console.log("🧪 BUILD VERSION: 2025-09-18-Alysia");
       console.log("🧪 DEBUG: hostId =", hostId);
       console.log("🧪 DEBUG: hostName =", hostName);
 
@@ -138,15 +139,11 @@ function LandingPageContent() {
 
       console.log("🧪 FINAL Axios payload:", payload);
 
-      const response = await axios.post(
-        `${backendUrl}/create-room`,
-        JSON.stringify(payload),
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axios.post(`${backendUrl}/create-room`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
