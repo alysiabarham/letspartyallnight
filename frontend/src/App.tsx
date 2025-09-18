@@ -411,6 +411,10 @@ function LandingPageContent() {
         OR
       </Text>
 
+      <Text fontSize="xs" color="gray.500">
+        Build: 2025-09-18-Alysia-FINAL
+      </Text>
+
       <Input
         placeholder="Enter Room Code"
         size="lg"
