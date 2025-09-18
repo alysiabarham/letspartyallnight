@@ -20,7 +20,7 @@ import axios from "axios";
 import "./App.css";
 import { socket } from "./socket";
 
-// Pages hi Salt
+// Pages
 import Home from "./pages/Home";
 import RoomPage from "./RoomPage";
 import EnterRoom from "./pages/EnterRoom";
@@ -32,6 +32,7 @@ import { AxiosError } from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("🧪 Backend URL:", backendUrl);
+const [socketIdReady, setSocketIdReady] = React.useState(false);
 
 function LandingPageContent() {
   const toast = useToast();
@@ -47,6 +48,7 @@ function LandingPageContent() {
       const id = socket.id;
       if (id) {
         setIsSocketConnected(true);
+        setSocketIdReady(true);
         console.log("✅ Socket connected:", id);
       } else {
         console.warn("⚠️ Socket connected but ID is missing");
@@ -55,8 +57,10 @@ function LandingPageContent() {
 
     socket.on("disconnect", () => {
       setIsSocketConnected(false);
+      setSocketIdReady(false);
       console.log("❌ Socket disconnected");
     });
+
     return () => {
       socket.off("connect");
       socket.off("disconnect");
@@ -84,7 +88,7 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected || !socket.id) {
+    if (!isSocketConnected || !socketIdReady) {
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -376,7 +380,7 @@ function LandingPageContent() {
         size="lg"
         onClick={handleCreateRoom}
         w="200px"
-        isDisabled={!isSocketConnected || !socket.id}
+        isDisabled={!isSocketConnected || !socketIdReady}
       >
         CREATE NEW ROOM
       </Button>
