@@ -123,7 +123,7 @@ function LandingPageContent() {
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
 
-      console.log("🧪 BUILD VERSION: 2025-09-18-Alysia");
+      console.log("🧪 BUILD VERSION: Alysia-Final-Fresh");
       console.log("🧪 DEBUG: hostId =", hostId);
       console.log("🧪 DEBUG: hostName =", hostName);
 
@@ -412,7 +412,7 @@ function LandingPageContent() {
       </Text>
 
       <Text fontSize="xs" color="gray.500">
-        Build: 2025-09-18-Alysia-FINAL
+        Build: Alysia-Final-Fresh
       </Text>
 
       <Input
