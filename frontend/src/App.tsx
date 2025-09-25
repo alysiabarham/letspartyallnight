@@ -68,7 +68,11 @@ function LandingPageContent() {
   }, []);
 
   const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPlayerNameInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
+    const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+    console.log("🧪 handlePlayerNameChange triggered");
+    console.log("🧪 e.target.value =", e.target.value);
+    console.log("🧪 cleaned value =", cleaned);
+    setPlayerNameInput(cleaned);
   };
 
   const handleRoomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,22 +124,28 @@ function LandingPageContent() {
         return;
       }
 
-      const hostId = socket.id;
-      const hostName = playerNameInput.trim();
+      console.log("🧪 typeof socket.id:", typeof socket.id);
+      console.log("🧪 socket.id:", socket.id);
+      console.log("🧪 typeof playerNameInput:", typeof playerNameInput);
+      console.log("🧪 playerNameInput raw:", playerNameInput);
+      console.log("🧪 playerNameInput.trim():", playerNameInput.trim?.());
 
-      console.log("🧪 BUILD VERSION: Alysia-CacheBust-0922");
-      console.log("🧪 DEBUG: hostId =", hostId);
-      console.log("🧪 DEBUG: hostName =", hostName);
+      const hostId =
+        typeof socket.id === "string" ? socket.id : "INVALID_SOCKET";
+      const hostName =
+        typeof playerNameInput === "string"
+          ? playerNameInput.trim()
+          : "INVALID_NAME";
+
+      console.log("🧪 Final hostId:", hostId);
+      console.log("🧪 Final hostName:", hostName);
+
+      const payload = { hostId, hostName };
 
       console.log("📍 Sending /create-room:", {
         hostId,
         hostName,
       });
-
-      const payload = {
-        hostId: socket.id,
-        hostName: playerNameInput.trim(),
-      };
 
       console.log("🧪 FINAL Axios payload:", payload);
 
@@ -398,7 +408,11 @@ function LandingPageContent() {
         boxShadow="0 0 15px #FF00FF"
         _hover={{ bg: "rgba(255,0,255,0.1)", boxShadow: "0 0 20px #FF00FF" }}
         size="lg"
-        onClick={handleCreateRoom}
+        onClick={() => {
+          console.log("🧪 Button clicked");
+          console.log("🧪 playerNameInput at click:", playerNameInput);
+          handleCreateRoom();
+        }}
         w="200px"
         isDisabled={
           !isSocketConnected || !socketIdReady || !playerNameInput.trim()
