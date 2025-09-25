@@ -31,7 +31,7 @@ import FinalResultsPage from "./FinalResultsPage";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("🧪 Backend URL:", backendUrl);
-console.log("📢 App.tsx DEPLOYMENT VERSION: 2025-09-25-alysia-final-v6");
+console.log("📢 App.tsx DEPLOYMENT VERSION: 2025-09-25-alysia-final-v7");
 
 function LandingPageContent() {
   const toast = useToast();
@@ -46,7 +46,6 @@ function LandingPageContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Log initial socket status
     console.log("🧪 Initial socket status:", {
       connected: socket.connected,
       id: socket.id,
@@ -74,9 +73,8 @@ function LandingPageContent() {
       });
     });
 
-    // Force socket connection if not connected
     if (!socket.connected) {
-      console.log("🧪 Attempting to connect socket...");
+      console.log("🧪 Forcing socket connection...");
       socket.connect();
     }
 
@@ -101,9 +99,10 @@ function LandingPageContent() {
   };
 
   const handleCreateRoom = async () => {
-    console.log("🧪 handleCreateRoom triggered");
-    console.log("🧪 playerNameInput:", playerNameInput);
-    console.log("🧪 socket.id:", socket.id);
+    console.log("🧪 handleCreateRoom triggered", {
+      playerNameInput,
+      socketId: socket.id,
+    });
 
     if (!playerNameInput.trim()) {
       console.log("🧪 No player name provided");
@@ -132,11 +131,10 @@ function LandingPageContent() {
     }
 
     try {
-      // Clear localStorage
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
-      console.log("🧹 Cleared localStorage for new room creation");
+      console.log("🧹 Cleared localStorage");
 
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
@@ -224,7 +222,14 @@ function LandingPageContent() {
   };
 
   const handleJoinRoom = async () => {
+    console.log("🧪 handleJoinRoom triggered", {
+      roomCodeInput,
+      playerNameInput,
+      socketId: socket.id,
+    });
+
     if (!roomCodeInput.trim() || !playerNameInput.trim()) {
+      console.log("🧪 Missing name or code");
       toast({
         title: "Enter name and code.",
         status: "warning",
@@ -341,22 +346,6 @@ function LandingPageContent() {
     }
   };
 
-  if (!isSocketConnected || !socketIdReady) {
-    return (
-      <VStack
-        spacing={8}
-        p={8}
-        minH="100vh"
-        justifyContent="center"
-        bg="#1A1A2E"
-      >
-        <Text fontSize="lg" color="white">
-          Connecting to server...
-        </Text>
-      </VStack>
-    );
-  }
-
   return (
     <VStack spacing={8} p={8} minH="100vh" justifyContent="center" bg="#1A1A2E">
       <div className="no-chakra">
@@ -378,7 +367,7 @@ function LandingPageContent() {
         Host or join a game with friends.
       </Text>
       <Text fontSize="xs" color="gray.500">
-        Build: 2025-09-25-Alysia-Final-v6
+        Build: 2025-09-25-Alysia-Final-v7
       </Text>
       <Input
         placeholder="Enter Your Name"
