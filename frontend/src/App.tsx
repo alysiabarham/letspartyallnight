@@ -11,7 +11,6 @@ import {
   ChakraProvider,
   Box,
   VStack,
-  Heading,
   Text,
   Input,
   Button,
@@ -19,6 +18,7 @@ import {
 import axios from "axios";
 import "./App.css";
 import { socket } from "./socket";
+import { AxiosError } from "axios";
 
 // Pages
 import Home from "./pages/Home";
@@ -28,10 +28,10 @@ import JudgeRankingPage from "./JudgeRankingPage";
 import GuesserRankingPage from "./GuesserRankingPage";
 import ResultsPage from "./ResultsPage";
 import FinalResultsPage from "./FinalResultsPage";
-import { AxiosError } from "axios";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 console.log("🧪 Backend URL:", backendUrl);
+console.log("📢 App.tsx DEPLOYMENT VERSION: 2025-09-25-alysia-final-v6");
 
 function LandingPageContent() {
   const toast = useToast();
@@ -40,38 +40,59 @@ function LandingPageContent() {
   const [isSocketConnected, setIsSocketConnected] = React.useState(
     socket.connected
   );
-  const [socketIdReady, setSocketIdReady] = React.useState(false);
+  const [socketIdReady, setSocketIdReady] = React.useState(
+    socket.id !== undefined
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
-    socket.on("connect", () => {
-      const id = socket.id;
-      if (id) {
-        setIsSocketConnected(true);
-        setSocketIdReady(true);
-        console.log("✅ Socket connected:", id);
-      } else {
-        console.warn("⚠️ Socket connected but ID is missing");
-      }
+    // Log initial socket status
+    console.log("🧪 Initial socket status:", {
+      connected: socket.connected,
+      id: socket.id,
     });
 
+    socket.on("connect", () => {
+      setIsSocketConnected(true);
+      setSocketIdReady(true);
+      console.log("✅ Socket connected:", socket.id);
+      socket.emit("checkSocketId", { socketId: socket.id });
+    });
     socket.on("disconnect", () => {
       setIsSocketConnected(false);
       setSocketIdReady(false);
       console.log("❌ Socket disconnected");
     });
+    socket.on("connect_error", (error) => {
+      console.error("🚫 Socket connect error:", error.message);
+      toast({
+        title: "Socket connection failed.",
+        description: "Retrying connection...",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    });
+
+    // Force socket connection if not connected
+    if (!socket.connected) {
+      console.log("🧪 Attempting to connect socket...");
+      socket.connect();
+    }
 
     return () => {
       socket.off("connect");
       socket.off("disconnect");
+      socket.off("connect_error");
     };
   }, []);
 
   const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-    console.log("🧪 handlePlayerNameChange triggered");
-    console.log("🧪 e.target.value =", e.target.value);
-    console.log("🧪 cleaned value =", cleaned);
+    console.log("🧪 handlePlayerNameChange:", {
+      value: e.target.value,
+      cleaned,
+    });
     setPlayerNameInput(cleaned);
   };
 
@@ -79,13 +100,13 @@ function LandingPageContent() {
     setRoomCodeInput(e.target.value.replace(/[^a-zA-Z0-9]/g, ""));
   };
 
-  console.log("🧪 playerNameInput value:", playerNameInput);
-  console.log("🧪 handleCreateRoom triggered");
-  console.log("🧪 socket.id =", socket.id);
-  console.log("🧪 playerNameInput =", playerNameInput);
-
   const handleCreateRoom = async () => {
+    console.log("🧪 handleCreateRoom triggered");
+    console.log("🧪 playerNameInput:", playerNameInput);
+    console.log("🧪 socket.id:", socket.id);
+
     if (!playerNameInput.trim()) {
+      console.log("🧪 No player name provided");
       toast({
         title: "Enter your name.",
         status: "warning",
@@ -95,7 +116,12 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected || !socketIdReady) {
+    if (!isSocketConnected || !socketIdReady || !socket.id) {
+      console.log("🧪 Socket not ready:", {
+        isSocketConnected,
+        socketIdReady,
+        id: socket.id,
+      });
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -106,69 +132,34 @@ function LandingPageContent() {
     }
 
     try {
-      // Clear localStorage to prevent name conflicts
+      // Clear localStorage
       localStorage.removeItem("alreadyJoined");
       localStorage.removeItem("playerName");
       localStorage.removeItem("isHost");
       console.log("🧹 Cleared localStorage for new room creation");
 
-      if (!socket.id) {
-        console.error("🚫 socket.id is undefined — aborting room creation");
-        toast({
-          title: "Socket not ready.",
-          description: "Please wait for connection before creating a room.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
-
-      console.log("🧪 typeof socket.id:", typeof socket.id);
-      console.log("🧪 socket.id:", socket.id);
-      console.log("🧪 typeof playerNameInput:", typeof playerNameInput);
-      console.log("🧪 playerNameInput raw:", playerNameInput);
-      console.log("🧪 playerNameInput.trim():", playerNameInput.trim?.());
-
       const hostId = socket.id;
       const hostName = playerNameInput.trim();
-
-      console.log("🧪 Building payload with:");
-      console.log("🧪 socket.id =", socket.id);
-      console.log("🧪 playerNameInput =", playerNameInput);
-      console.log("🧪 hostId =", hostId);
-      console.log("🧪 hostName =", hostName);
-
       const payload = { hostId, hostName };
-      console.log("🧪 FINAL Axios payload:", payload);
-
-      console.log("📍 Sending /create-room:", {
-        hostId,
-        hostName,
-      });
-
+      console.log("🧪 Building payload:", { hostId, hostName });
       console.log("🧪 FINAL Axios payload:", payload);
 
       const response = await axios.post(`${backendUrl}/create-room`, payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       const { roomCode } = response.data;
       console.log("📍 Created room:", { roomCode, hostId, hostName });
 
-      // Set localStorage for host
       localStorage.setItem("alreadyJoined", roomCode);
       localStorage.setItem("playerName", hostName);
       localStorage.setItem("isHost", "true");
-      console.log("📍 Set localStorage for host:", {
+      console.log("📍 Set localStorage:", {
         roomCode,
         playerName: hostName,
         isHost: true,
       });
 
-      // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
         socket.once(
           "playerJoined",
@@ -186,16 +177,13 @@ function LandingPageContent() {
           }
         );
         socket.once("joinError", ({ message }) => {
-          console.log("📡 Received joinError during create:", message);
+          console.log("📡 Received joinError:", message);
           reject(new Error(message));
         });
       });
 
       socket.emit("joinGameRoom", { roomCode, playerName: hostName });
-      console.log("📡 Sent joinGameRoom for host:", {
-        roomCode,
-        playerName: hostName,
-      });
+      console.log("📡 Sent joinGameRoom:", { roomCode, playerName: hostName });
 
       await joinPromise;
 
@@ -246,7 +234,12 @@ function LandingPageContent() {
       return;
     }
 
-    if (!isSocketConnected || !socketIdReady) {
+    if (!isSocketConnected || !socketIdReady || !socket.id) {
+      console.log("🧪 Socket not ready for join:", {
+        isSocketConnected,
+        socketIdReady,
+        id: socket.id,
+      });
       toast({
         title: "Connecting to server...",
         status: "warning",
@@ -274,7 +267,6 @@ function LandingPageContent() {
       const { room } = response.data;
       console.log("📍 Join-room response:", { roomCode: room.code, playerId });
 
-      // Wait for playerJoined confirmation
       const joinPromise = new Promise((resolve, reject) => {
         socket.once(
           "playerJoined",
@@ -296,7 +288,7 @@ function LandingPageContent() {
           }
         );
         socket.once("joinError", ({ message }) => {
-          console.log("📡 Received joinError during join:", message);
+          console.log("📡 Received joinError:", message);
           reject(new Error(message));
         });
       });
@@ -305,7 +297,7 @@ function LandingPageContent() {
         roomCode: room.code,
         playerName: playerId,
       });
-      console.log("📡 Sent joinGameRoom for join:", {
+      console.log("📡 Sent joinGameRoom:", {
         roomCode: room.code,
         playerName: playerId,
       });
@@ -385,7 +377,9 @@ function LandingPageContent() {
       <Text fontSize="lg" color="white">
         Host or join a game with friends.
       </Text>
-
+      <Text fontSize="xs" color="gray.500">
+        Build: 2025-09-25-Alysia-Final-v6
+      </Text>
       <Input
         placeholder="Enter Your Name"
         size="lg"
@@ -400,7 +394,6 @@ function LandingPageContent() {
         pattern="^[a-zA-Z0-9]*$"
         title="Letters and numbers only"
       />
-
       <Button
         bg="transparent"
         color="#FF00FF"
@@ -409,8 +402,10 @@ function LandingPageContent() {
         _hover={{ bg: "rgba(255,0,255,0.1)", boxShadow: "0 0 20px #FF00FF" }}
         size="lg"
         onClick={() => {
-          console.log("🧪 Button clicked");
-          console.log("🧪 playerNameInput at click:", playerNameInput);
+          console.log("🧪 Create Room button clicked", {
+            playerNameInput,
+            socketId: socket.id,
+          });
           handleCreateRoom();
         }}
         w="200px"
@@ -420,15 +415,9 @@ function LandingPageContent() {
       >
         CREATE NEW ROOM
       </Button>
-
       <Text fontSize="lg" color="white">
         OR
       </Text>
-
-      <Text fontSize="xs" color="gray.500">
-        Build: Alysia-CacheBust-0922
-      </Text>
-
       <Input
         placeholder="Enter Room Code"
         size="lg"
@@ -443,7 +432,6 @@ function LandingPageContent() {
         pattern="^[a-zA-Z0-9]*$"
         title="Alphanumeric only"
       />
-
       <Button
         bg="transparent"
         color="#00FF00"
