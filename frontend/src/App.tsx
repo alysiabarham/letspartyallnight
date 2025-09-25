@@ -130,17 +130,17 @@ function LandingPageContent() {
       console.log("🧪 playerNameInput raw:", playerNameInput);
       console.log("🧪 playerNameInput.trim():", playerNameInput.trim?.());
 
-      const hostId =
-        typeof socket.id === "string" ? socket.id : "INVALID_SOCKET";
-      const hostName =
-        typeof playerNameInput === "string"
-          ? playerNameInput.trim()
-          : "INVALID_NAME";
+      const hostId = socket.id;
+      const hostName = playerNameInput.trim();
 
-      console.log("🧪 Final hostId:", hostId);
-      console.log("🧪 Final hostName:", hostName);
+      console.log("🧪 Building payload with:");
+      console.log("🧪 socket.id =", socket.id);
+      console.log("🧪 playerNameInput =", playerNameInput);
+      console.log("🧪 hostId =", hostId);
+      console.log("🧪 hostName =", hostName);
 
       const payload = { hostId, hostName };
+      console.log("🧪 FINAL Axios payload:", payload);
 
       console.log("📍 Sending /create-room:", {
         hostId,
