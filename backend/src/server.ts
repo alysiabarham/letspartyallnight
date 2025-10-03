@@ -190,7 +190,7 @@ const categories = [
   "Worst Things",
 ];
 
-const isAlphanumeric = (text: string): boolean => /^[a-zA-Z0-9]+$/.test(text);
+const isAlphanumeric = (text: string): boolean => /^[a-zA-Z0-9_-]+$/.test(text);
 
 function shuffleArray(arr: string[]): string[] {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -228,7 +228,7 @@ app.all("/socket.io/*", (_req, res) => {
   res.status(400).send("Polling transport blocked");
 });
 
-// --- Routes --- hi Salt
+// --- Routes ---
 app.get("/", (_req, res) => {
   res.send("Hello from the Let's Party All Night backend!");
 });
