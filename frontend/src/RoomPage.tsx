@@ -27,7 +27,9 @@ function RoomPage() {
   const isHost =
     location.state?.isHost || localStorage.getItem("isHost") === "true";
   const [players, setPlayers] = useState<string[]>([]);
-  const [entries, setEntries] = useState<string[]>([]);
+  const [entries, setEntries] = useState<
+    { playerName: string; entry: string }[]
+  >([]);
   const [entryText, setEntryText] = useState("");
   const [doneSubmitting, setDoneSubmitting] = useState(false);
   const [host, setHost] = useState("");
@@ -42,6 +44,9 @@ function RoomPage() {
   const [role, setRole] = useState<"player" | "spectator">("player");
   const isInRoomRef = useRef(false);
   const [hasSubmitted, setHasSubmitted] = React.useState(false);
+  const playerEntries = entries.filter((e) => e.playerName === playerName);
+
+  console.log("🧪 Entries by", playerName, ":", playerEntries.length);
 
   useEffect(() => {
     console.log("📍 RoomPage mounted:", {
@@ -230,8 +235,8 @@ function RoomPage() {
       }
     });
 
-    socket.on("newEntry", ({ entry }) => {
-      setEntries((prev) => [...prev, entry]);
+    socket.on("newEntry", ({ entry, playerName }) => {
+      setEntries((prev) => [...prev, { entry, playerName }]);
     });
 
     socket.on("startRankingPhase", ({ judgeName }) => {
@@ -394,7 +399,7 @@ function RoomPage() {
       return;
     }
 
-    if (entries.map((e) => e.toLowerCase()).includes(cleaned)) {
+    if (entries.map((e) => e.entry.toLowerCase()).includes(cleaned)) {
       toast({
         title: "Duplicate entry",
         description: "That response has already been submitted.",
@@ -420,7 +425,8 @@ function RoomPage() {
   };
 
   const handleDoneSubmitting = () => {
-    const uniqueEntryCount = new Set(entries.map((e) => e.toLowerCase())).size;
+    const uniqueEntryCount = new Set(entries.map((e) => e.entry.toLowerCase()))
+      .size;
     if (uniqueEntryCount < 5) {
       toast({
         title: "Not enough unique responses",
@@ -565,8 +571,10 @@ function RoomPage() {
           >
             Submit Entry
           </Button>
+          console.log("🧪 Player entries:", entries.length);
           <Button
-            isDisabled={entries.length < 5 || hasSubmitted}
+            colorScheme="green"
+            isDisabled={hasSubmitted || playerEntries.length < 5}
             onClick={() => {
               socket.emit("doneSubmitting", {
                 roomCode,
@@ -594,7 +602,7 @@ function RoomPage() {
           <List spacing={1}>
             {entries.map((entry, i) => (
               <ListItem key={i} color="whiteAlpha.800">
-                • {entry}
+                • {entry.entry}
               </ListItem>
             ))}
           </List>

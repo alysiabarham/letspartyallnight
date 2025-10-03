@@ -228,7 +228,7 @@ app.all("/socket.io/*", (_req, res) => {
   res.status(400).send("Polling transport blocked");
 });
 
-// --- Routes ---
+// --- Routes --- hi Salt
 app.get("/", (_req, res) => {
   res.send("Hello from the Let's Party All Night backend!");
 });
