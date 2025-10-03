@@ -68,6 +68,7 @@ export type Room = {
   state: "lobby" | "active" | "ended";
   maxPlayers: number;
   gameData: Record<string, unknown>;
+  submissionTracker?: Set<string>;
 };
 
 export type SocketServerEvents = {

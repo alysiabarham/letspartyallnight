@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
@@ -21,8 +22,10 @@ function RoomPage() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const playerName = location.state?.playerName || localStorage.getItem("playerName") || "Guest";
-  const isHost = location.state?.isHost || localStorage.getItem("isHost") === "true";
+  const playerName =
+    location.state?.playerName || localStorage.getItem("playerName") || "Guest";
+  const isHost =
+    location.state?.isHost || localStorage.getItem("isHost") === "true";
   const [players, setPlayers] = useState<string[]>([]);
   const [entries, setEntries] = useState<string[]>([]);
   const [entryText, setEntryText] = useState("");
@@ -32,10 +35,13 @@ function RoomPage() {
   const [judge, setJudge] = useState("");
   const [round, setRound] = useState(1);
   const [gameStarted, setGameStarted] = useState(false);
-  const [phase, setPhase] = useState<"lobby" | "entry" | "ranking" | "reveal">("lobby");
+  const [phase, setPhase] = useState<"lobby" | "entry" | "ranking" | "reveal">(
+    "lobby"
+  );
   const [roundLimit, setRoundLimit] = useState(5);
   const [role, setRole] = useState<"player" | "spectator">("player");
   const isInRoomRef = useRef(false);
+  const [hasSubmitted, setHasSubmitted] = React.useState(false);
 
   useEffect(() => {
     console.log("📍 RoomPage mounted:", {
@@ -82,7 +88,11 @@ function RoomPage() {
     const storedIsHost = localStorage.getItem("isHost") === "true";
 
     // Skip join attempt for hosts or already joined players
-    if (isHost || storedIsHost || (alreadyJoined === roomCode && storedPlayerName === safeName)) {
+    if (
+      isHost ||
+      storedIsHost ||
+      (alreadyJoined === roomCode && storedPlayerName === safeName)
+    ) {
       console.log("🛑 Host or already joined. Emitting setRole:", {
         isHost,
         storedIsHost,
@@ -91,7 +101,11 @@ function RoomPage() {
         safeName,
       });
       isInRoomRef.current = true;
-      socket.emit("setRole", { roomCode, playerName: safeName, role: "player" });
+      socket.emit("setRole", {
+        roomCode,
+        playerName: safeName,
+        role: "player",
+      });
       return;
     }
 
@@ -116,29 +130,32 @@ function RoomPage() {
 
       socket.emit("joinGameRoom", { roomCode, playerName: safeName });
 
-      socket.once("playerJoined", ({ success, roomCode: joinedCode, playerName: joinedName }) => {
-        console.log("📡 Received playerJoined:", {
-          success,
-          roomCode: joinedCode,
-          playerName: joinedName,
-        });
-        if (success && joinedCode === roomCode && joinedName === safeName) {
-          isInRoomRef.current = true;
-          localStorage.setItem("alreadyJoined", roomCode);
-          localStorage.setItem("playerName", safeName);
-          localStorage.setItem("isHost", "false");
-          if (!toast.isActive(`join-room-${roomCode}`)) {
-            toast({
-              id: `join-room-${roomCode}`,
-              title: "Room joined!",
-              description: `Joined: ${roomCode}`,
-              status: "success",
-              duration: 3000,
-              isClosable: true,
-            });
+      socket.once(
+        "playerJoined",
+        ({ success, roomCode: joinedCode, playerName: joinedName }) => {
+          console.log("📡 Received playerJoined:", {
+            success,
+            roomCode: joinedCode,
+            playerName: joinedName,
+          });
+          if (success && joinedCode === roomCode && joinedName === safeName) {
+            isInRoomRef.current = true;
+            localStorage.setItem("alreadyJoined", roomCode);
+            localStorage.setItem("playerName", safeName);
+            localStorage.setItem("isHost", "false");
+            if (!toast.isActive(`join-room-${roomCode}`)) {
+              toast({
+                id: `join-room-${roomCode}`,
+                title: "Room joined!",
+                description: `Joined: ${roomCode}`,
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+              });
+            }
           }
         }
-      });
+      );
     };
 
     const timer = setTimeout(() => {
@@ -157,8 +174,15 @@ function RoomPage() {
         localStorageIsHost: localStorage.getItem("isHost"),
         players,
       });
-      if (isInRoomRef.current || isHost || localStorage.getItem("isHost") === "true") {
-        console.warn("⚠️ Ignoring joinError as player is already in room:", message);
+      if (
+        isInRoomRef.current ||
+        isHost ||
+        localStorage.getItem("isHost") === "true"
+      ) {
+        console.warn(
+          "⚠️ Ignoring joinError as player is already in room:",
+          message
+        );
         return;
       }
       toast({
@@ -211,7 +235,12 @@ function RoomPage() {
     });
 
     socket.on("startRankingPhase", ({ judgeName }) => {
-      console.log("🔔 Received startRankingPhase. Judge is:", judgeName, "I am:", playerName);
+      console.log(
+        "🔔 Received startRankingPhase. Judge is:",
+        judgeName,
+        "I am:",
+        playerName
+      );
       setJudge(judgeName);
       setPhase("ranking");
       if (playerName === judgeName) {
@@ -223,22 +252,37 @@ function RoomPage() {
       }
     });
 
-    socket.on("roomState", ({ players, phase, round, judgeName, category, state }) => {
-      console.log("🩺 Resyncing from roomState:", { phase, judgeName, state, players });
-      setPlayers(players.map((p: { name: string }) => p.name));
-      setPhase(phase);
-      setRound(round);
-      setJudge(judgeName || "");
-      setCategory(category || "");
-      const me = (players as { name: string; role?: "player" | "spectator" }[]).find(
-        (p) => p.name === playerName,
-      );
-      if (me?.role) {
-        setRole(me.role);
+    socket.on(
+      "roomState",
+      ({ players, phase, round, judgeName, category, state }) => {
+        console.log("🩺 Resyncing from roomState:", {
+          phase,
+          judgeName,
+          state,
+          players,
+        });
+        setPlayers(players.map((p: { name: string }) => p.name));
+        setPhase(phase);
+        setRound(round);
+        setJudge(judgeName || "");
+        setCategory(category || "");
+        const me = (
+          players as { name: string; role?: "player" | "spectator" }[]
+        ).find((p) => p.name === playerName);
+        if (me?.role) {
+          setRole(me.role);
+        }
+        isInRoomRef.current = players.some(
+          (p: { name: string }) => p.name === playerName
+        );
+        console.log(
+          "📍 Updated isInRoomRef:",
+          isInRoomRef.current,
+          "Player in players:",
+          playerName
+        );
       }
-      isInRoomRef.current = players.some((p: { name: string }) => p.name === playerName);
-      console.log("📍 Updated isInRoomRef:", isInRoomRef.current, "Player in players:", playerName);
-    });
+    );
 
     socket.on("phaseChange", ({ phase }) => {
       setPhase(phase);
@@ -332,7 +376,8 @@ function RoomPage() {
     if (!isAlphanumeric) {
       toast({
         title: "Invalid entry",
-        description: "Please use only letters, numbers, and spaces—no punctuation or symbols.",
+        description:
+          "Please use only letters, numbers, and spaces—no punctuation or symbols.",
         status: "error",
         duration: 4000,
         isClosable: true,
@@ -407,7 +452,14 @@ function RoomPage() {
   const isSpectator = role === "spectator";
 
   return (
-    <VStack spacing={6} p={6} minH="100vh" bg="#0F0F1E" color="white" position="relative">
+    <VStack
+      spacing={6}
+      p={6}
+      minH="100vh"
+      bg="#0F0F1E"
+      color="white"
+      position="relative"
+    >
       <Heading size="2xl" className="neon-text">
         Room: <span style={{ color: "#FF00FF" }}>{roomCode}</span>
       </Heading>
@@ -441,7 +493,13 @@ function RoomPage() {
         </Box>
       )}
 
-      <Text fontSize="sm" position="absolute" top="10px" right="10px" color="gray.400">
+      <Text
+        fontSize="sm"
+        position="absolute"
+        top="10px"
+        right="10px"
+        color="gray.400"
+      >
         Room: {roomCode}
       </Text>
 
@@ -508,9 +566,14 @@ function RoomPage() {
             Submit Entry
           </Button>
           <Button
-            onClick={handleDoneSubmitting}
-            isDisabled={new Set(entries.map((e) => e.toLowerCase())).size < 5}
-            colorScheme="blue"
+            isDisabled={entries.length < 5 || hasSubmitted}
+            onClick={() => {
+              socket.emit("doneSubmitting", {
+                roomCode,
+                playerName,
+              });
+              setHasSubmitted(true);
+            }}
           >
             I'm Done Submitting
           </Button>
@@ -518,7 +581,13 @@ function RoomPage() {
       )}
 
       {gameStarted && !isJudge && !isSpectator && entries.length > 0 && (
-        <Box mt={4} border="1px solid #FFFF00" p={3} borderRadius="md" w="300px">
+        <Box
+          mt={4}
+          border="1px solid #FFFF00"
+          p={3}
+          borderRadius="md"
+          w="300px"
+        >
           <Heading size="sm" mb={2} color="#FFFF00">
             Submitted Entries:
           </Heading>

@@ -532,6 +532,7 @@ io.on("connection", (socket: IOSocket) => {
       room.totalScores = {};
       room.entries = [];
       room.guesses = {};
+      room.submissionTracker = new Set();
 
       const category =
         categories[Math.floor(Math.random() * categories.length)];
@@ -618,6 +619,51 @@ io.on("connection", (socket: IOSocket) => {
       });
     }
   );
+
+  socket.on("doneSubmitting", ({ roomCode, playerName }) => {
+    const upperCode = roomCode.toUpperCase();
+    const room = rooms[upperCode];
+    if (!room) return;
+
+    room.submissionTracker ??= new Set();
+    room.submissionTracker.add(playerName);
+
+    const allSubmitted = room.players
+      .filter((p) => p.role === "player")
+      .every((p) => room.submissionTracker?.has(p.name));
+
+    if (allSubmitted) {
+      room.phase = "ranking";
+      room.phaseStartTime = Date.now();
+
+      io.to(upperCode).emit("phaseChange", { phase: room.phase });
+      io.to(roomCode).emit("startRankingPhase", {
+        judgeName: room.judgeName ?? "Unknown",
+      });
+
+      const judgeSocket =
+        room.players.find((p: Player) => p.name === room.judgeName)?.id ||
+        socket.id;
+      const anonymousEntries = room.entries.map((e) => e.entry);
+
+      io.to(judgeSocket).emit("sendAllEntries", { entries: anonymousEntries });
+      io.to(judgeSocket).emit("roomState", {
+        players: room.players,
+        phase: room.phase,
+        round: room.round,
+        judgeName: room.judgeName,
+        category: room.category,
+        state: room.state,
+      });
+
+      console.log(
+        `[${new Date().toISOString()}] 🔄 Phase changed to: ${room.phase} in ${upperCode}`
+      );
+      console.log(
+        `🔔 Ranking phase started in ${upperCode} by judge ${room.judgeName}`
+      );
+    }
+  });
 
   socket.on(
     "startRankingPhase",
